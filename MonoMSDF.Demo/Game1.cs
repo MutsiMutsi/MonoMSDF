@@ -68,6 +68,8 @@ namespace MGSDF_Demo
 			_fontSharp.AddFont(File.ReadAllBytes(@"C:\Windows\Fonts\consola.ttf"));
 
 			_spriteFont = Content.Load<SpriteFont>("consola");
+
+			_textRenderer.GenerateGeometry("We want more!\nMuch more.", Color.Yellow, Color.Red);
 		}
 
 		protected override void Update(GameTime gameTime)
@@ -86,7 +88,7 @@ namespace MGSDF_Demo
 
 
 			float sin01 = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 0.25f) + 1.0f) / 2f;
-			_textRenderer.GenerateGeometry("Lorem ipsum dolor sit amet, consectetur adipiscing elit.\nNunc cursus ligula id lacus posuere pretium.\nSed eleifend turpis lorem, nec feugiat tortor ultrices quis.\nClass aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.\nUt feugiat erat sed placerat molestie.\nNam semper ultrices libero, et porttitor ex varius in.\nSed ac imperdiet ligula.\nPraesent odio mi, venenatis sed dapibus eleifend, rhoncus id eros.\nLorem ipsum dolor sit amet, consectetur adipiscing elit.\nPellentesque sed leo non ex volutpat blandit ultricies a purus.\nPellentesque id molestie tortor.\nCurabitur auctor cursus porta.\nQuisque tincidunt eros risus, in efficitur urna molestie nec.\nSed convallis non mauris at blandit.\nDuis vel elit non augue ullamcorper pellentesque.\nInterdum et malesuada fames ac ante ipsum primis in faucibus.\nMauris vitae massa blandit, gravida massa vitae, porta odio.\nNullam accumsan eget nibh nec aliquam.\nInterdum et malesuada fames ac ante ipsum primis in faucibus.\nVestibulum blandit euismod ipsum, nec pretium turpis ultricies sit amet.\nSed lectus sem, volutpat id orci vitae, euismod aliquet purus.\nQuisque consectetur arcu neque, vel venenatis diam varius id.\nVivamus egestas malesuada vulputate.\nNulla eu egestas ante.\nCras a commodo metus.\nVivamus vulputate ante quis nulla pharetra tincidunt.\nCras egestas, ligula ac aliquet aliquet, nibh quam molestie enim, quis convallis lacus orci iaculis arcu.\nClass aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.\nDonec finibus et ex a elementum.\nMauris justo leo, vulputate vel quam a, dapibus egestas arcu.\nIn egestas orci ac tincidunt tincidunt.\nCurabitur eget tellus commodo, rutrum ante vel, tempor arcu.\nPhasellus ac tortor quis nisi pulvinar blandit.\nVestibulum tempor semper pulvinar.\nPellentesque varius dictum enim et pulvinar.\nCurabitur ac tellus et dolor faucibus efficitur quis vel elit.\nIn commodo dolor at urna tristique commodo.\nLorem ipsum dolor sit amet, consectetur adipiscing elit.\nSed euismod sodales condimentum.\nOrci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.\nSed scelerisque commodo odio non ultricies.\nSed id venenatis magna, in tempus metus.\nCras finibus libero vel nisi vehicula cursus.\nNam tristique, arcu eget posuere maximus, ex quam pretium nisi, eu porttitor leo nisl a leo.\nEtiam eget libero sit amet nunc egestas dapibus.Nunc imperdiet eros quam, sed varius mi gravida interdum.\nDonec id odio scelerisque, consequat libero sit amet, pulvinar ex.\nPraesent ut ligula magna.\nInteger mattis fermentum est tincidunt ornare.\nDuis vel lorem risus.\nEtiam varius odio sed felis auctor aliquet.\nFusce aliquet nunc at venenatis iaculis.\nNulla nec dolor sit amet dui ornare elementum.\nIn nulla nisl, tristique non pharetra a, imperdiet ac sem.",
+			/*_textRenderer.GenerateGeometry("Lorem ipsum dolor sit amet, consectetur adipiscing elit.\nNunc cursus ligula id lacus posuere pretium.\nSed eleifend turpis lorem, nec feugiat tortor ultrices quis.\nClass aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.\nUt feugiat erat sed placerat molestie.\nNam semper ultrices libero, et porttitor ex varius in.\nSed ac imperdiet ligula.\nPraesent odio mi, venenatis sed dapibus eleifend, rhoncus id eros.\nLorem ipsum dolor sit amet, consectetur adipiscing elit.\nPellentesque sed leo non ex volutpat blandit ultricies a purus.\nPellentesque id molestie tortor.\nCurabitur auctor cursus porta.\nQuisque tincidunt eros risus, in efficitur urna molestie nec.\nSed convallis non mauris at blandit.\nDuis vel elit non augue ullamcorper pellentesque.\nInterdum et malesuada fames ac ante ipsum primis in faucibus.\nMauris vitae massa blandit, gravida massa vitae, porta odio.\nNullam accumsan eget nibh nec aliquam.\nInterdum et malesuada fames ac ante ipsum primis in faucibus.\nVestibulum blandit euismod ipsum, nec pretium turpis ultricies sit amet.\nSed lectus sem, volutpat id orci vitae, euismod aliquet purus.\nQuisque consectetur arcu neque, vel venenatis diam varius id.\nVivamus egestas malesuada vulputate.\nNulla eu egestas ante.\nCras a commodo metus.\nVivamus vulputate ante quis nulla pharetra tincidunt.\nCras egestas, ligula ac aliquet aliquet, nibh quam molestie enim, quis convallis lacus orci iaculis arcu.\nClass aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.\nDonec finibus et ex a elementum.\nMauris justo leo, vulputate vel quam a, dapibus egestas arcu.\nIn egestas orci ac tincidunt tincidunt.\nCurabitur eget tellus commodo, rutrum ante vel, tempor arcu.\nPhasellus ac tortor quis nisi pulvinar blandit.\nVestibulum tempor semper pulvinar.\nPellentesque varius dictum enim et pulvinar.\nCurabitur ac tellus et dolor faucibus efficitur quis vel elit.\nIn commodo dolor at urna tristique commodo.\nLorem ipsum dolor sit amet, consectetur adipiscing elit.\nSed euismod sodales condimentum.\nOrci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.\nSed scelerisque commodo odio non ultricies.\nSed id venenatis magna, in tempus metus.\nCras finibus libero vel nisi vehicula cursus.\nNam tristique, arcu eget posuere maximus, ex quam pretium nisi, eu porttitor leo nisl a leo.\nEtiam eget libero sit amet nunc egestas dapibus.Nunc imperdiet eros quam, sed varius mi gravida interdum.\nDonec id odio scelerisque, consequat libero sit amet, pulvinar ex.\nPraesent ut ligula magna.\nInteger mattis fermentum est tincidunt ornare.\nDuis vel lorem risus.\nEtiam varius odio sed felis auctor aliquet.\nFusce aliquet nunc at venenatis iaculis.\nNulla nec dolor sit amet dui ornare elementum.\nIn nulla nisl, tristique non pharetra a, imperdiet ac sem.",
 				Palette[8], Palette[3]);
 
 			_textRenderer.RenderText(
@@ -95,17 +97,22 @@ namespace MGSDF_Demo
 				Matrix.CreateOrthographicOffCenter(0, 1920, 1080, 0, -1f, 1f),
 				64f,
 				FontDrawType.StandardText
-			);
+			);*/
 
-			_textRenderer.GenerateGeometry("We want more!\nMuch more.", Color.Yellow, Color.Red);
-
-			_textRenderer.RenderText(
+			/*_textRenderer.RenderText(
 				Matrix.Identity,
 				Matrix.CreateScale(64f) * Matrix.CreateTranslation(64, 64, 0),
 				Matrix.CreateOrthographicOffCenter(0, 1920, 1080, 0, -1f, 1f),
 				64f,
 				FontDrawType.StandardText
-			);
+			);*/
+
+			_textRenderer.AddTextInstance(Matrix.CreateScale(64f) * Matrix.CreateTranslation(32, 0, 0), 64f);
+			_textRenderer.AddTextInstance(Matrix.CreateScale(8f) * Matrix.CreateTranslation(32, 256, 0), 8f);
+			_textRenderer.AddTextInstance(Matrix.CreateScale(1024f) * Matrix.CreateTranslation(0, 128, 0), 1024f);
+			//_textRenderer.AddTextInstance(Matrix.CreateScale(0.5f) * Matrix.CreateTranslation(300, 100, 0));
+
+			_textRenderer.RenderInstances(Matrix.Identity, Matrix.CreateOrthographicOffCenter(0, 1920, 1080, 0, -1f, 1f));
 
 			/*float sin01 = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds) + 1.0f) / 2f;
 			float sin01Fast = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 20f) + 1.0f) / 2f;

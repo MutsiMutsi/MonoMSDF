@@ -1,13 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace MonoMSDF
 {
 
-	[StructLayout(LayoutKind.Sequential, Pack = 0)]
+	[StructLayout(LayoutKind.Sequential, Pack = 16)]
 	public struct VertexFont : IVertexType
 	{
 		public Vector2 Position { get; set; }
@@ -28,6 +26,31 @@ namespace MonoMSDF
 			new VertexElement(8, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0),
 			new VertexElement(16, VertexElementFormat.Color, VertexElementUsage.Color, 0),
 			new VertexElement(20, VertexElementFormat.Color, VertexElementUsage.Color, 1)
+		);
+	}
+
+	//TODO: check if padding helps or not, its to align with 16 byte
+	[StructLayout(LayoutKind.Sequential, Pack = 16)]
+	public struct TextInstance
+	{
+		public Matrix WorldTransform;
+		public Vector2 PixelRanges;
+		private Vector2 _padding;   // 8 bytes padding
+
+		public TextInstance(Matrix world, float screenPxRange, float distanceRange)
+		{
+			PixelRanges.X = screenPxRange;
+			PixelRanges.Y = distanceRange;
+			WorldTransform = world;
+		}
+
+		public static readonly VertexDeclaration VertexDeclaration = new VertexDeclaration(
+			80, // added due to padding of 8 bytes padding
+			new VertexElement(0, VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 1),
+			new VertexElement(16, VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 2),
+			new VertexElement(32, VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 3),
+			new VertexElement(48, VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 4),
+			new VertexElement(64, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 5)
 		);
 	}
 
@@ -59,6 +82,10 @@ namespace MonoMSDF
 		private readonly VertexFont[] vertices;
 		private readonly short[] indices;
 
+		private DynamicVertexBuffer instanceBuffer;
+		private TextInstance[] instances = new TextInstance[1024];
+		private int instanceCount = 0;
+
 		public MSDFTextRenderer(GraphicsDevice graphicsDevice, Effect msdifEffect)
 		{
 			this.graphicsDevice = graphicsDevice;
@@ -75,6 +102,29 @@ namespace MonoMSDF
 				AddressU = TextureAddressMode.Clamp,
 				AddressV = TextureAddressMode.Clamp
 			};
+
+			instanceBuffer = new DynamicVertexBuffer(
+				graphicsDevice,
+				TextInstance.VertexDeclaration,
+				instances.Length,
+				BufferUsage.WriteOnly
+			);
+		}
+
+		public void AddTextInstance(Matrix transform, float scale)
+		{
+			if (instanceCount >= instances.Length)
+				Array.Resize(ref instances, instances.Length * 2);
+
+			sizeInPixel = scale;
+			float dpi = 96.0f;
+			float pointSize = sizeInPixel;
+			float actualScale = dpi / 72.0f * pointSize;
+			float sizeInEm = glyphAtlas.Atlas.Size;
+			float pixelRange = glyphAtlas.Atlas.DistanceRange;
+			float screenPxRange = sizeInPixel / sizeInEm * pixelRange;
+
+			instances[instanceCount++] = new TextInstance(transform, screenPxRange, glyphAtlas.Atlas.DistanceRange);
 		}
 
 		public bool LoadAtlas(string jsonPath, string pngPath)
@@ -126,7 +176,6 @@ namespace MonoMSDF
 			float dpi = 96.0f;
 			float pointSize = scale;
 			float actualScale = dpi / 72.0f * pointSize;
-
 			float sizeInEm = glyphAtlas.Atlas.Size;
 			float pixelRange = glyphAtlas.Atlas.DistanceRange;
 			float screenPxRange = sizeInPixel / sizeInEm * pixelRange;
@@ -188,6 +237,52 @@ namespace MonoMSDF
 					numTriangles // primitive count
 				);
 			}
+		}
+
+		public void RenderInstances(Matrix view, Matrix projection, FontDrawType drawType = FontDrawType.StandardText)
+		{
+			if (atlasTexture == null || msdifEffect == null || instanceCount == 0)
+				return;
+
+			msdifEffect.Parameters["WorldViewProjection"].SetValue(view * projection);
+			msdifEffect.Parameters["SpriteTexture"].SetValue(atlasTexture);
+			msdifEffect.Parameters["AtlasSize"].SetValue(new Vector2(glyphAtlas.Atlas.Width, glyphAtlas.Atlas.Height));
+
+			string tech = drawType switch
+			{
+				FontDrawType.StandardText => "MSDFTextRendering",
+				FontDrawType.StandardTextWithStroke => "MSDFTextWithStroke",
+				FontDrawType.TinyText => "MSDFSmallText",
+				FontDrawType.TinyTextWithStroke => "MSDFSmallTextWithStroke",
+				_ => "MSDFTextRendering"
+			};
+
+			msdifEffect.CurrentTechnique = msdifEffect.Techniques[tech];
+			msdifEffect.CurrentTechnique.Passes[0].Apply();
+
+			// Make sure graphics state is setup proper.
+			graphicsDevice.RasterizerState = RasterizerState.CullCounterClockwise;
+			graphicsDevice.DepthStencilState = DepthStencilState.None;
+			graphicsDevice.BlendState = BlendState.NonPremultiplied;
+			graphicsDevice.Textures[0] = atlasTexture;
+
+			graphicsDevice.SetVertexBuffers(
+				new VertexBufferBinding(TextBuffer.VertexBuffer, 0, 0),
+				new VertexBufferBinding(instanceBuffer, 0, 1)
+			);
+			graphicsDevice.Indices = TextBuffer.IndexBuffer;
+
+			instanceBuffer.SetData(instances, 0, instanceCount, SetDataOptions.Discard);
+
+			graphicsDevice.DrawInstancedPrimitives(
+				PrimitiveType.TriangleList,
+				baseVertex: 0,
+				startIndex: 0,
+				primitiveCount: numTriangles,
+				instanceCount: instanceCount
+			);
+
+			instanceCount = 0; // Reset for next frame
 		}
 
 		private void GenerateTextGeometry(string text, VertexFont[] vertices, short[] indices, Color fillColor, Color strokeColor)
