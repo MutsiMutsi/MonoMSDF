@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace MonoMSDF
@@ -48,11 +49,12 @@ namespace MonoMSDF
 
 		private GlyphAtlas glyphAtlas;
 		private readonly Dictionary<int, Glyph> glyphs = [];
+		Dictionary<(char, char), float> kerningPairs = new();
 
 		public DynamicTextBuffer TextBuffer;
 
-		private int numIndices = 0;
 		private float sizeInPixel = 0;
+		private int numTriangles = 0;
 
 		private readonly VertexFont[] vertices;
 		private readonly short[] indices;
@@ -62,10 +64,9 @@ namespace MonoMSDF
 			this.graphicsDevice = graphicsDevice;
 			this.msdifEffect = msdifEffect;
 
-
-			vertices = new VertexFont[1000 * 4];
-			indices = new short[1000 * 6];
-			TextBuffer = new DynamicTextBuffer(graphicsDevice, 1000);
+			vertices = new VertexFont[4096 * 4];
+			indices = new short[4096 * 6];
+			TextBuffer = new DynamicTextBuffer(graphicsDevice, 4096);
 
 			// Create sampler state for texture filtering
 			samplerState = new SamplerState
@@ -84,7 +85,15 @@ namespace MonoMSDF
 				glyphAtlas = FontLoader.Load(jsonPath);
 				foreach (Glyph glyph in glyphAtlas.Glyphs)
 				{
-					glyphs[glyph.unicode] = glyph;
+					glyphs[glyph.Unicode] = glyph;
+				}
+
+				foreach (var kernEntry in glyphAtlas.Kerning)
+				{
+					char left = (char)kernEntry.Unicode1;
+					char right = (char)kernEntry.Unicode2;
+					float advance = (float)kernEntry.Advance;
+					kerningPairs[(left, right)] = advance;
 				}
 
 				// Load PNG texture using MonoGame's content pipeline or Texture2D.FromFile
@@ -99,30 +108,27 @@ namespace MonoMSDF
 			}
 		}
 
-		public void GenerateGeometry(string text, Vector2 position, float scale, Color fillColor, Color strokeColor)
+		public void GenerateGeometry(string text, Color fillColor, Color strokeColor)
 		{
-			sizeInPixel = scale;
-			_ = text.Length * 4;
-			numIndices = text.Length * 6;
-
-			float dpi = 96.0f;
-			float pointSize = scale;
-			float actualScale = dpi / 72.0f * pointSize;
-
-			GenerateTextGeometry(text, position, actualScale, vertices, indices, fillColor, strokeColor);
+			GenerateTextGeometry(text, vertices, indices, fillColor, strokeColor);
 			TextBuffer.UpdateText(vertices, indices);
 		}
 
-		public void RenderText(Matrix world, Matrix view, Matrix projection, FontDrawType drawType = FontDrawType.StandardText)
+		public void RenderText(Matrix world, Matrix view, Matrix projection, float scale, FontDrawType drawType = FontDrawType.StandardText)
 		{
 			if (atlasTexture == null || msdifEffect == null)
 			{
 				return;
 			}
 
+			sizeInPixel = scale;
 
-			float sizeInEm = glyphAtlas.Atlas.size;
-			float pixelRange = glyphAtlas.Atlas.distanceRange;
+			float dpi = 96.0f;
+			float pointSize = scale;
+			float actualScale = dpi / 72.0f * pointSize;
+
+			float sizeInEm = glyphAtlas.Atlas.Size;
+			float pixelRange = glyphAtlas.Atlas.DistanceRange;
 			float screenPxRange = sizeInPixel / sizeInEm * pixelRange;
 
 			// Set effect parameters
@@ -130,9 +136,8 @@ namespace MonoMSDF
 			msdifEffect.Parameters["ScreenPxRange"].SetValue(screenPxRange);
 			msdifEffect.Parameters["SpriteTexture"].SetValue(atlasTexture);
 
-			msdifEffect.Parameters["AtlasSize"].SetValue(new Vector2(glyphAtlas.Atlas.width, glyphAtlas.Atlas.height));
-			msdifEffect.Parameters["DistanceRange"].SetValue(glyphAtlas.Atlas.distanceRange);
-
+			msdifEffect.Parameters["AtlasSize"].SetValue(new Vector2(glyphAtlas.Atlas.Width, glyphAtlas.Atlas.Height));
+			msdifEffect.Parameters["DistanceRange"].SetValue(glyphAtlas.Atlas.DistanceRange);
 
 			//"MSDFTextWithStroke"
 			//"MSDFSmallTextWithStroke"
@@ -157,7 +162,7 @@ namespace MonoMSDF
 			msdifEffect.CurrentTechnique = msdifEffect.Techniques[tech];
 
 			msdifEffect.CurrentTechnique.Passes[0].Apply();
-			if (TextBuffer.VertexBuffer != null && TextBuffer.IndexBuffer != null && numIndices > 0)
+			if (TextBuffer.VertexBuffer != null && TextBuffer.IndexBuffer != null && numTriangles > 0)
 			{
 				// Set vertex buffer
 				graphicsDevice.SetVertexBuffer(TextBuffer.VertexBuffer);
@@ -169,34 +174,41 @@ namespace MonoMSDF
 				graphicsDevice.BlendState = BlendState.NonPremultiplied;
 				graphicsDevice.Textures[0] = atlasTexture;
 
+				graphicsDevice.RasterizerState = new RasterizerState()
+				{
+					CullMode = CullMode.None,
+					FillMode = FillMode.Solid,
+				};
+
 				// Draw indexed primitives
 				graphicsDevice.DrawIndexedPrimitives(
 					PrimitiveType.TriangleList,
 					0, // base vertex
 					0, // start index
-					numIndices / 3 // primitive count
+					numTriangles // primitive count
 				);
 			}
 		}
 
-		private void GenerateTextGeometry(string text, Vector2 position, float scale, VertexFont[] vertices, short[] indices, Color fillColor, Color strokeColor)
+		private void GenerateTextGeometry(string text, VertexFont[] vertices, short[] indices, Color fillColor, Color strokeColor)
 		{
+			numTriangles = 0;
+
+			Vector2 position = Vector2.Zero;
 			position.Y = -position.Y;
 			float x = position.X;
-			float y = position.Y - sizeInPixel;
+			float y = position.Y - glyphAtlas.Metrics.Ascender;
 
 			int vertexIndex = 0;
 			int indicesIndex = 0;
 
-			float progress = 0f;
-			float stepSize = 1.0f / text.Length;
-
-			foreach (char c in text)
+			for (int i = 0; i < text.Length; i++)
 			{
+				char c = text[i];
 				if (c == '\n')
 				{
 					x = position.X;
-					y -= scale * glyphAtlas.Metrics.lineHeight;
+					y -= glyphAtlas.Metrics.LineHeight;
 				}
 
 				if (!glyphs.TryGetValue(c, out Glyph glyph))
@@ -204,72 +216,54 @@ namespace MonoMSDF
 					continue;
 				}
 
-				if (glyph.planeBounds.right == 0)
+				if (glyph.PlaneBounds.right == 0)
 				{
-					x += glyph.advance * scale;
+					x += glyph.Advance;
 					continue;
 				}
 
 				// Calculate glyph quad positions
-				float glyphLeft = x + (glyph.planeBounds.left * scale);
-				float glyphBottom = y + (glyph.planeBounds.bottom * scale);
-				float glyphRight = x + (glyph.planeBounds.right * scale);
-				float glyphTop = y + (glyph.planeBounds.top * scale);
+				float glyphLeft = x + (glyph.PlaneBounds.left);
+				float glyphBottom = y + (glyph.PlaneBounds.bottom);
+				float glyphRight = x + (glyph.PlaneBounds.right);
+				float glyphTop = y + (glyph.PlaneBounds.top);
 
 				// Calculate texture coordinates
-				float texLeft = glyph.atlasBounds.left / glyphAtlas.Atlas.width;
-				float texBottom = glyph.atlasBounds.bottom / glyphAtlas.Atlas.height;
-				float texRight = glyph.atlasBounds.right / glyphAtlas.Atlas.width;
-				float texTop = glyph.atlasBounds.top / glyphAtlas.Atlas.height;
+				float texLeft = glyph.AtlasBounds.left / glyphAtlas.Atlas.Width;
+				float texBottom = glyph.AtlasBounds.bottom / glyphAtlas.Atlas.Height;
+				float texRight = glyph.AtlasBounds.right / glyphAtlas.Atlas.Width;
+				float texTop = glyph.AtlasBounds.top / glyphAtlas.Atlas.Height;
 
 				// Flip Y coordinates if atlas origin is bottom
-				if (glyphAtlas.Atlas.yOrigin == "bottom")
+				if (glyphAtlas.Atlas.YOrigin == "bottom")
 				{
 					texBottom = 1.0f - texBottom;
 					texTop = 1.0f - texTop;
 				}
 
-				Color stroke = strokeColor;
-				if (c == 'a')
-				{
-					stroke = Color.Red;
-				}
-
-				if (c == 'e')
-				{
-					stroke = Color.Red;
-				}
 				vertices[vertexIndex] = new VertexFont(
 					new Vector2(glyphLeft, -glyphBottom),
 					new Vector2(texLeft, texBottom),
-					fillColor * progress,
-					stroke
+					fillColor,
+					strokeColor
 				);
-				if (c == 'e')
-				{
-					stroke = Color.Green;
-				}
 				vertices[vertexIndex + 1] = new VertexFont(
 					new Vector2(glyphRight, -glyphBottom),
 					new Vector2(texRight, texBottom),
-					fillColor * progress,
-					stroke
+					fillColor,
+					strokeColor
 				);
-				if (c == 'e')
-				{
-					stroke = Color.Blue;
-				}
 				vertices[vertexIndex + 2] = new VertexFont(
 					new Vector2(glyphRight, -glyphTop),
 					new Vector2(texRight, texTop),
-					fillColor * progress,
-					stroke
+					fillColor,
+					strokeColor
 				);
 				vertices[vertexIndex + 3] = new VertexFont(
 					new Vector2(glyphLeft, -glyphTop),
 					new Vector2(texLeft, texTop),
-					fillColor * progress,
-					stroke
+					fillColor,
+					strokeColor
 				);
 
 				// Create indices for two triangles forming a quad
@@ -281,9 +275,18 @@ namespace MonoMSDF
 				indices[indicesIndex++] = (short)(vertexIndex + 2);
 
 				vertexIndex += 4;
-				x += glyph.advance * scale;
+				numTriangles += 2;
 
-				progress += stepSize;
+				if (i < text.Length - 2)
+				{
+					float kern;
+					if (kerningPairs.TryGetValue((text[i], text[i + 1]), out kern))
+					{
+						x += kern;
+					}
+				}
+
+				x += glyph.Advance;
 			}
 		}
 

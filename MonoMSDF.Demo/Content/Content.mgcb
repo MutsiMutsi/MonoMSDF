@@ -13,6 +13,13 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin consola.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:consola.spritefont
+
 #begin msdf_ps.fx
 /importer:EffectImporter
 /processor:EffectProcessor

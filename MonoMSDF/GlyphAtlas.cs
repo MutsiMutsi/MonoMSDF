@@ -2,17 +2,6 @@
 
 namespace MonoMSDF;
 
-public class Atlas
-{
-	public string type { get; set; }
-	public int distanceRange { get; set; }
-	public int distanceRangeMiddle { get; set; }
-	public int size { get; set; }
-	public int width { get; set; }
-	public int height { get; set; }
-	public string yOrigin { get; set; }
-}
-
 public struct Bounds
 {
 	public float left { get; set; }
@@ -21,23 +10,40 @@ public struct Bounds
 	public float top { get; set; }
 }
 
+public class Atlas
+{
+	public string Type { get; set; }
+	public int DistanceRange { get; set; }
+	public int DistanceRangeMiddle { get; set; }
+	public int Size { get; set; }
+	public int Width { get; set; }
+	public int Height { get; set; }
+	public string YOrigin { get; set; }
+}
 
 public class Glyph
 {
-	public int unicode { get; set; }
-	public float advance { get; set; }
-	public Bounds planeBounds { get; set; }
-	public Bounds atlasBounds { get; set; }
+	public int Unicode { get; set; }
+	public float Advance { get; set; }
+	public Bounds PlaneBounds { get; set; }
+	public Bounds AtlasBounds { get; set; }
+}
+
+public class Kerning
+{
+	public int Unicode1 { get; set; }
+	public int Unicode2 { get; set; }
+	public float Advance { get; set; }
 }
 
 public class Metrics
 {
-	public int emSize { get; set; }
-	public float lineHeight { get; set; }
-	public float ascender { get; set; }
-	public float descender { get; set; }
-	public float underlineY { get; set; }
-	public float underlineThickness { get; set; }
+	public int EmSize { get; set; }
+	public float LineHeight { get; set; }
+	public float Ascender { get; set; }
+	public float Descender { get; set; }
+	public float UnderlineY { get; set; }
+	public float UnderlineThickness { get; set; }
 }
 
 public class GlyphAtlas
@@ -45,7 +51,7 @@ public class GlyphAtlas
 	public Atlas Atlas { get; set; }
 	public Metrics Metrics { get; set; }
 	public List<Glyph> Glyphs { get; set; }
-	public List<object> Kerning { get; set; }
+	public List<Kerning> Kerning { get; set; }
 }
 
 [JsonSourceGenerationOptions(

@@ -107,7 +107,7 @@ float4 MainPS(VertexShaderOutput input) : COLOR
     float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
     
     // Apply text color with calculated opacity
-    return float4(input.FillColor.rgb, input.FillColor.a * opacity);
+    return float4(input.FillColor.rgb, input.FillColor.a * opacity) + float4(0.1, 0, 0, 0.1);
 }
 
 // MSDF pixel shader with stroke support (using your existing ScreenPxRange)

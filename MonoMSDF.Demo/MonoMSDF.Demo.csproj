@@ -13,6 +13,7 @@
   <PropertyGroup>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Icon.ico</ApplicationIcon>
+    <MonoGamePlatform>DesktopGL</MonoGamePlatform>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Icon.ico" />
@@ -28,17 +29,29 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FontStashSharp.MonoGame" Version="1.3.10" />
-    <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.*" />
     <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.*" />
+    <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.4" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MonoMSDF\MonoMSDF.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="arial.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="arial.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="big.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="big.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="georgia.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="georgia.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
