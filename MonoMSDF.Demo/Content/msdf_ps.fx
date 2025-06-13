@@ -18,27 +18,26 @@ sampler2D SpriteTextureSampler = sampler_state
     AddressV = Clamp;
 };
 
-// Shader parameters
 float4x4 WorldViewProjection;
-
-// Only needed for small text optimization - can be omitted if you don't use those techniques
 float2 AtlasSize;
 
 // Vertex shader input structure
 struct VertexShaderInput
 {
+    //VertexBuffer data
     float3 Position : POSITION0;
     float2 TextureCoordinates : TEXCOORD0;
     float4 FillColor : COLOR0;
     float4 StrokeColor : COLOR1;
+    float GeometryID : TEXCOORD7;
     
-    // These are the 4 rows of the instance's transform matrix
+    //Instanced data
     float4 WorldMatrixRow0 : TEXCOORD1;
     float4 WorldMatrixRow1 : TEXCOORD2;
     float4 WorldMatrixRow2 : TEXCOORD3;
     float4 WorldMatrixRow3 : TEXCOORD4;
-    
     float2 PixelRanges : TEXCOORD5;
+    float InstanceID : TEXCOORD6;
 };
 
 // Vertex shader output structure
@@ -56,7 +55,16 @@ struct VertexShaderOutput
 VertexShaderOutput MainVS(VertexShaderInput input)
 {
     VertexShaderOutput output;
-	
+    if (input.InstanceID != input.GeometryID)
+    {
+        output.FillColor = float4(0, 0, 0, 0);
+        output.PixelRanges = 0.0;
+        output.Position = float4(-10000, -10000, -10000, -10000);
+        output.StrokeColor = float4(0, 0, 0, 0);
+        output.TextureCoordinates = float2(0, 0);
+        return output;
+    }
+    
 	// Transform vertex position to screen space
     float4x4 WorldMatrix = float4x4(
         input.WorldMatrixRow0,
@@ -77,7 +85,7 @@ VertexShaderOutput MainVS(VertexShaderInput input)
     
     // Pass through instance data for distancerange and pxrange
     output.PixelRanges = input.PixelRanges;
-
+    
     return output;
 }
 

@@ -1,10 +1,10 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace MonoMSDF
 {
-
 	[StructLayout(LayoutKind.Sequential, Pack = 16)]
 	public struct VertexFont : IVertexType
 	{
@@ -12,45 +12,48 @@ namespace MonoMSDF
 		public Vector2 TextureCoordinate { get; set; }
 		public Color FillColor { get; set; }
 		public Color StrokeColor { get; set; }
+		public float GeometryID { get; set; }
 
-		public VertexFont(Vector2 pos, Vector2 tc, Color fillColor, Color strokeColor)
+		public VertexFont(Vector2 pos, Vector2 tc, Color fillColor, Color strokeColor, float geometryId)
 		{
 			Position = pos;
 			TextureCoordinate = tc;
 			FillColor = fillColor;
 			StrokeColor = strokeColor;
+			GeometryID = geometryId;
 		}
 
-		public VertexDeclaration VertexDeclaration => new VertexDeclaration(
+		public VertexDeclaration VertexDeclaration => new(
 			new VertexElement(0, VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
 			new VertexElement(8, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0),
 			new VertexElement(16, VertexElementFormat.Color, VertexElementUsage.Color, 0),
-			new VertexElement(20, VertexElementFormat.Color, VertexElementUsage.Color, 1)
+			new VertexElement(20, VertexElementFormat.Color, VertexElementUsage.Color, 1),
+			new VertexElement(24, VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 7)
 		);
 	}
 
-	//TODO: check if padding helps or not, its to align with 16 byte
-	[StructLayout(LayoutKind.Sequential, Pack = 16)]
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct TextInstance
 	{
-		public Matrix WorldTransform;
-		public Vector2 PixelRanges;
-		private Vector2 _padding;   // 8 bytes padding
+		public Matrix WorldTransform;      // 64 bytes
+		public Vector2 PixelRanges;        // 8 bytes  
+		public float InstanceID;           // 4 bytes
 
-		public TextInstance(Matrix world, float screenPxRange, float distanceRange)
+		public TextInstance(Matrix world, float screenPxRange, float distanceRange, float instanceId)
 		{
 			PixelRanges.X = screenPxRange;
 			PixelRanges.Y = distanceRange;
 			WorldTransform = world;
+			InstanceID = instanceId;
 		}
 
-		public static readonly VertexDeclaration VertexDeclaration = new VertexDeclaration(
-			80, // added due to padding of 8 bytes padding
+		public static readonly VertexDeclaration VertexDeclaration = new(
 			new VertexElement(0, VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 1),
 			new VertexElement(16, VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 2),
 			new VertexElement(32, VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 3),
 			new VertexElement(48, VertexElementFormat.Vector4, VertexElementUsage.TextureCoordinate, 4),
-			new VertexElement(64, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 5)
+			new VertexElement(64, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 5),
+			new VertexElement(72, VertexElementFormat.Single, VertexElementUsage.TextureCoordinate, 6)
 		);
 	}
 
@@ -72,7 +75,7 @@ namespace MonoMSDF
 
 		private GlyphAtlas glyphAtlas;
 		private readonly Dictionary<int, Glyph> glyphs = [];
-		Dictionary<(char, char), float> kerningPairs = new();
+		private readonly Dictionary<(char, char), float> kerningPairs = [];
 
 		public DynamicTextBuffer TextBuffer;
 
@@ -82,8 +85,8 @@ namespace MonoMSDF
 		private readonly VertexFont[] vertices;
 		private readonly short[] indices;
 
-		private DynamicVertexBuffer instanceBuffer;
-		private TextInstance[] instances = new TextInstance[1024];
+		private readonly DynamicVertexBuffer instanceBuffer;
+		private TextInstance[] instances = new TextInstance[100_000];
 		private int instanceCount = 0;
 
 		public MSDFTextRenderer(GraphicsDevice graphicsDevice, Effect msdifEffect)
@@ -111,20 +114,23 @@ namespace MonoMSDF
 			);
 		}
 
-		public void AddTextInstance(Matrix transform, float scale)
+		public void AddTextInstance(Matrix transform, float scale, int geometryIndex)
 		{
 			if (instanceCount >= instances.Length)
+			{
 				Array.Resize(ref instances, instances.Length * 2);
+			}
 
 			sizeInPixel = scale;
 			float dpi = 96.0f;
 			float pointSize = sizeInPixel;
-			float actualScale = dpi / 72.0f * pointSize;
+			_ = dpi / 72.0f * pointSize;
 			float sizeInEm = glyphAtlas.Atlas.Size;
 			float pixelRange = glyphAtlas.Atlas.DistanceRange;
 			float screenPxRange = sizeInPixel / sizeInEm * pixelRange;
 
-			instances[instanceCount++] = new TextInstance(transform, screenPxRange, glyphAtlas.Atlas.DistanceRange);
+			instances[instanceCount] = new TextInstance(transform, screenPxRange, glyphAtlas.Atlas.DistanceRange, geometryIndex);
+			instanceCount++;
 		}
 
 		public bool LoadAtlas(string jsonPath, string pngPath)
@@ -138,7 +144,7 @@ namespace MonoMSDF
 					glyphs[glyph.Unicode] = glyph;
 				}
 
-				foreach (var kernEntry in glyphAtlas.Kerning)
+				foreach (Kerning kernEntry in glyphAtlas.Kerning)
 				{
 					char left = (char)kernEntry.Unicode1;
 					char right = (char)kernEntry.Unicode2;
@@ -160,8 +166,20 @@ namespace MonoMSDF
 
 		public void GenerateGeometry(string text, Color fillColor, Color strokeColor)
 		{
-			GenerateTextGeometry(text, vertices, indices, fillColor, strokeColor);
-			TextBuffer.UpdateText(vertices, indices);
+			int vertexOffset = numTriangles * 3;
+			int indexOffset = numTriangles * 3;
+
+			int addedTriangles = GenerateTextGeometry(
+				text, vertices, indices,
+				vertexOffset, indexOffset,
+				fillColor, strokeColor
+			);
+
+			numTriangles += addedTriangles;
+
+			TextBuffer.UpdateText(vertices, indices, vertexOffset + (text.Length * 4), indexOffset + (text.Length * 6));
+
+			Debug.WriteLine(indices.Count(o => o > 0));
 		}
 
 		public void RenderText(Matrix world, Matrix view, Matrix projection, float scale, FontDrawType drawType = FontDrawType.StandardText)
@@ -175,7 +193,7 @@ namespace MonoMSDF
 
 			float dpi = 96.0f;
 			float pointSize = scale;
-			float actualScale = dpi / 72.0f * pointSize;
+			_ = dpi / 72.0f * pointSize;
 			float sizeInEm = glyphAtlas.Atlas.Size;
 			float pixelRange = glyphAtlas.Atlas.DistanceRange;
 			float screenPxRange = sizeInPixel / sizeInEm * pixelRange;
@@ -222,6 +240,7 @@ namespace MonoMSDF
 				graphicsDevice.DepthStencilState = DepthStencilState.None;
 				graphicsDevice.BlendState = BlendState.NonPremultiplied;
 				graphicsDevice.Textures[0] = atlasTexture;
+				graphicsDevice.SamplerStates[0] = samplerState;
 
 				graphicsDevice.RasterizerState = new RasterizerState()
 				{
@@ -242,7 +261,9 @@ namespace MonoMSDF
 		public void RenderInstances(Matrix view, Matrix projection, FontDrawType drawType = FontDrawType.StandardText)
 		{
 			if (atlasTexture == null || msdifEffect == null || instanceCount == 0)
+			{
 				return;
+			}
 
 			msdifEffect.Parameters["WorldViewProjection"].SetValue(view * projection);
 			msdifEffect.Parameters["SpriteTexture"].SetValue(atlasTexture);
@@ -265,6 +286,7 @@ namespace MonoMSDF
 			graphicsDevice.DepthStencilState = DepthStencilState.None;
 			graphicsDevice.BlendState = BlendState.NonPremultiplied;
 			graphicsDevice.Textures[0] = atlasTexture;
+			graphicsDevice.SamplerStates[0] = samplerState;
 
 			graphicsDevice.SetVertexBuffers(
 				new VertexBufferBinding(TextBuffer.VertexBuffer, 0, 0),
@@ -284,18 +306,25 @@ namespace MonoMSDF
 
 			instanceCount = 0; // Reset for next frame
 		}
+		private int geometryCount = 0;
 
-		private void GenerateTextGeometry(string text, VertexFont[] vertices, short[] indices, Color fillColor, Color strokeColor)
+		private int GenerateTextGeometry(
+			string text,
+			VertexFont[] vertices,
+			short[] indices,
+			int vertexOffset,
+			int indexOffset,
+			Color fillColor,
+			Color strokeColor)
 		{
-			numTriangles = 0;
-
 			Vector2 position = Vector2.Zero;
 			position.Y = -position.Y;
 			float x = position.X;
 			float y = position.Y - glyphAtlas.Metrics.Ascender;
 
-			int vertexIndex = 0;
-			int indicesIndex = 0;
+			int vertexIndex = vertexOffset;
+			int indicesIndex = indexOffset;
+			int triangles = 0;
 
 			for (int i = 0; i < text.Length; i++)
 			{
@@ -317,51 +346,27 @@ namespace MonoMSDF
 					continue;
 				}
 
-				// Calculate glyph quad positions
-				float glyphLeft = x + (glyph.PlaneBounds.left);
-				float glyphBottom = y + (glyph.PlaneBounds.bottom);
-				float glyphRight = x + (glyph.PlaneBounds.right);
-				float glyphTop = y + (glyph.PlaneBounds.top);
+				float glyphLeft = x + glyph.PlaneBounds.left;
+				float glyphBottom = y + glyph.PlaneBounds.bottom;
+				float glyphRight = x + glyph.PlaneBounds.right;
+				float glyphTop = y + glyph.PlaneBounds.top;
 
-				// Calculate texture coordinates
 				float texLeft = glyph.AtlasBounds.left / glyphAtlas.Atlas.Width;
 				float texBottom = glyph.AtlasBounds.bottom / glyphAtlas.Atlas.Height;
 				float texRight = glyph.AtlasBounds.right / glyphAtlas.Atlas.Width;
 				float texTop = glyph.AtlasBounds.top / glyphAtlas.Atlas.Height;
 
-				// Flip Y coordinates if atlas origin is bottom
 				if (glyphAtlas.Atlas.YOrigin == "bottom")
 				{
 					texBottom = 1.0f - texBottom;
 					texTop = 1.0f - texTop;
 				}
 
-				vertices[vertexIndex] = new VertexFont(
-					new Vector2(glyphLeft, -glyphBottom),
-					new Vector2(texLeft, texBottom),
-					fillColor,
-					strokeColor
-				);
-				vertices[vertexIndex + 1] = new VertexFont(
-					new Vector2(glyphRight, -glyphBottom),
-					new Vector2(texRight, texBottom),
-					fillColor,
-					strokeColor
-				);
-				vertices[vertexIndex + 2] = new VertexFont(
-					new Vector2(glyphRight, -glyphTop),
-					new Vector2(texRight, texTop),
-					fillColor,
-					strokeColor
-				);
-				vertices[vertexIndex + 3] = new VertexFont(
-					new Vector2(glyphLeft, -glyphTop),
-					new Vector2(texLeft, texTop),
-					fillColor,
-					strokeColor
-				);
+				vertices[vertexIndex] = new VertexFont(new Vector2(glyphLeft, -glyphBottom), new Vector2(texLeft, texBottom), fillColor, strokeColor, geometryCount);
+				vertices[vertexIndex + 1] = new VertexFont(new Vector2(glyphRight, -glyphBottom), new Vector2(texRight, texBottom), fillColor, strokeColor, geometryCount);
+				vertices[vertexIndex + 2] = new VertexFont(new Vector2(glyphRight, -glyphTop), new Vector2(texRight, texTop), fillColor, strokeColor, geometryCount);
+				vertices[vertexIndex + 3] = new VertexFont(new Vector2(glyphLeft, -glyphTop), new Vector2(texLeft, texTop), fillColor, strokeColor, geometryCount);
 
-				// Create indices for two triangles forming a quad
 				indices[indicesIndex++] = (short)vertexIndex;
 				indices[indicesIndex++] = (short)(vertexIndex + 2);
 				indices[indicesIndex++] = (short)(vertexIndex + 1);
@@ -370,19 +375,19 @@ namespace MonoMSDF
 				indices[indicesIndex++] = (short)(vertexIndex + 2);
 
 				vertexIndex += 4;
-				numTriangles += 2;
+				triangles += 2;
 
-				if (i < text.Length - 2)
+				if (i < text.Length - 2 && kerningPairs.TryGetValue((text[i], text[i + 1]), out float kern))
 				{
-					float kern;
-					if (kerningPairs.TryGetValue((text[i], text[i + 1]), out kern))
-					{
-						x += kern;
-					}
+					x += kern;
 				}
 
 				x += glyph.Advance;
 			}
+
+			geometryCount++;
+
+			return triangles;
 		}
 
 		public void Dispose()
@@ -421,16 +426,18 @@ namespace MonoMSDF
 			);
 		}
 
-		public void UpdateText(VertexFont[] vertices, short[] indices)
+		public void UpdateText(VertexFont[] vertices, short[] indices, int vertexCount, int indexCount)
 		{
-			if (vertices.Length > 0)
+			ResizeBuffersIfNeeded(vertexCount, indexCount);
+
+			if (vertexCount > 0)
 			{
-				VertexBuffer.SetData(vertices);
+				VertexBuffer.SetData(vertices, 0, vertexCount);
 			}
 
-			if (indices.Length > 0)
+			if (indexCount > 0)
 			{
-				IndexBuffer.SetData(indices);
+				IndexBuffer.SetData(indices, 0, indexCount);
 			}
 		}
 
@@ -438,6 +445,21 @@ namespace MonoMSDF
 		{
 			VertexBuffer?.Dispose();
 			IndexBuffer?.Dispose();
+		}
+
+		private void ResizeBuffersIfNeeded(int newVertexCount, int newIndexCount)
+		{
+			if (newVertexCount > VertexBuffer.VertexCount)
+			{
+				VertexBuffer?.Dispose();
+				VertexBuffer = new VertexBuffer(graphicsDevice, typeof(VertexFont), newVertexCount, BufferUsage.WriteOnly);
+			}
+
+			if (newIndexCount > IndexBuffer.IndexCount)
+			{
+				IndexBuffer?.Dispose();
+				IndexBuffer = new IndexBuffer(graphicsDevice, IndexElementSize.SixteenBits, newIndexCount, BufferUsage.WriteOnly);
+			}
 		}
 	}
 
