@@ -141,7 +141,7 @@ namespace MonoMSDF
 			}
 
 			_buffer.ResizeVBO();
-			Free(new (_buffer.Vertices.Length / 2, _buffer.Vertices.Length / 2, _buffer.Indices.Length / 2, _buffer.Indices.Length / 2));
+			Free(new(_buffer.Vertices.Length / 2, _buffer.Vertices.Length / 2, _buffer.Indices.Length / 2, _buffer.Indices.Length / 2));
 			return Allocate(vertexCount);
 		}
 
@@ -273,7 +273,7 @@ namespace MonoMSDF
 				fillColor, strokeColor
 			);
 
-				TextBuffer.UpdateText(bufferRange.VertexOffset, bufferRange.VertexCount, bufferRange.IndexOffset, bufferRange.IndexCount);
+			TextBuffer.UpdateText(bufferRange.VertexOffset, bufferRange.VertexCount, bufferRange.IndexOffset, bufferRange.IndexCount);
 
 			geometryCount++;
 
