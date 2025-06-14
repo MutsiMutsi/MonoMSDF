@@ -9,11 +9,11 @@ namespace MonoMSDF
 	[StructLayout(LayoutKind.Sequential, Pack = 16)]
 	public struct VertexFont : IVertexType
 	{
-		public Vector2 Position { get; set; }
-		public Vector2 TextureCoordinate { get; set; }
-		public Color FillColor { get; set; }
-		public Color StrokeColor { get; set; }
-		public float GeometryID { get; set; }
+		public Vector2 Position;
+		public Vector2 TextureCoordinate;
+		public Color FillColor;
+		public Color StrokeColor;
+		public float GeometryID;
 
 		public VertexFont(Vector2 pos, Vector2 tc, Color fillColor, Color strokeColor, float geometryId)
 		{
@@ -105,10 +105,12 @@ namespace MonoMSDF
 		public List<BufferRange> FreeRanges = new(); // Sorted by VertexOffset
 		private int nextVertexOffset = 0;
 		private int nextIndexOffset = 0;
+		private DynamicTextBuffer _buffer;
 
-		public BufferAllocator(int initialVertexCapacity, int initialIndexCapacity)
+		public BufferAllocator(int initialVertexCapacity, int initialIndexCapacity, DynamicTextBuffer buffer)
 		{
 			FreeRanges.Add(new BufferRange(0, initialVertexCapacity, 0, initialIndexCapacity));
+			this._buffer = buffer;
 		}
 
 		public BufferRange Allocate(int vertexCount)
@@ -136,6 +138,20 @@ namespace MonoMSDF
 
 					return allocated;
 				}
+			}
+
+			//Detect if we're running out of space.
+			var lastBuf = FreeRanges[FreeRanges.Count - 1];
+			if (nextVertexOffset + vertexCount > lastBuf.VertexOffset + lastBuf.VertexCount)
+			{
+				Debug.WriteLine($"Old VBO size {_buffer.Vertices.Length}");
+				_buffer.ResizeVBO();
+				lastBuf.VertexCount += _buffer.Vertices.Length / 2;
+				lastBuf.IndexCount += _buffer.Indices.Length / 2;
+				FreeRanges[FreeRanges.Count - 1] = lastBuf;
+
+				Debug.WriteLine($"{nextVertexOffset + vertexCount} more than {lastBuf.VertexOffset + lastBuf.VertexCount}");
+				Debug.WriteLine($"New VBO size {_buffer.Vertices.Length}");
 			}
 
 			// Fallback: append at end
@@ -192,15 +208,12 @@ namespace MonoMSDF
 		private int instanceCount = 0;
 		private int geometryCount = 1;
 
-		public BufferAllocator Allocator;
-
 		public MSDFTextRenderer(GraphicsDevice graphicsDevice, Effect msdifEffect)
 		{
 			this.graphicsDevice = graphicsDevice;
 			this.msdifEffect = msdifEffect;
 
-			TextBuffer = new DynamicTextBuffer(graphicsDevice, 12800);
-			Allocator = new BufferAllocator(TextBuffer.Vertices.Length, TextBuffer.Indices.Length);
+			TextBuffer = new DynamicTextBuffer(graphicsDevice, 64);
 
 			// Create sampler state for texture filtering
 			samplerState = new SamplerState
@@ -216,7 +229,7 @@ namespace MonoMSDF
 			//Resize instances if we need to.
 			if (instanceCount >= TextBuffer.Instances.Length)
 			{
-				TextBuffer.ResizeToIfNeeded();
+				TextBuffer.ResizeInstanceBuffer();
 			}
 
 			float sizeInPixel = scale;
@@ -269,9 +282,9 @@ namespace MonoMSDF
 			{
 				renderableCharCount += (text[i] != ' ' && text[i] != '\n') ? 1 : 0;
 			}
-			var bufferRange = Allocator.Allocate(renderableCharCount * 4);
+			var bufferRange = TextBuffer.Allocator.Allocate(renderableCharCount * 4);
 
-			var addedGeo = GenerateTextGeometry(
+			GenerateTextGeometry(
 				geometryCount, text,
 				bufferRange.VertexOffset, bufferRange.IndexOffset,
 				fillColor, strokeColor
@@ -289,6 +302,7 @@ namespace MonoMSDF
 
 		public TextGeometryHandle ReplaceGeometry(TextGeometryHandle handle, string text, Color fillColor, Color strokeColor)
 		{
+			int numChars = 0;
 			//This is a rough estimate
 			if (handle.BufferRange.VertexCount < text.Length * 4)
 			{
@@ -302,36 +316,36 @@ namespace MonoMSDF
 				//We assume we cant grow where we are now, so we will append a new geo.
 				if (handle.BufferRange.VertexCount < renderableCharCount * 4)
 				{
-					Allocator.Free(handle.BufferRange);
+					TextBuffer.Allocator.Free(handle.BufferRange);
 					TextBuffer.InvalidateRange(handle.BufferRange.VertexOffset, handle.BufferRange.VertexCount);
 
-					var bufferRange = Allocator.Allocate(renderableCharCount * 4);
+					var bufferRange = TextBuffer.Allocator.Allocate(renderableCharCount * 4);
 
-					var addedGeo = GenerateTextGeometry(
+					numChars = GenerateTextGeometry(
 						handle.GeometryID, text,
 						bufferRange.VertexOffset, bufferRange.IndexOffset,
 						fillColor, strokeColor
 					);
 
-					TextBuffer.UpdateText(bufferRange.VertexOffset, addedGeo.numVertices, bufferRange.IndexOffset, addedGeo.numIndices);
+					TextBuffer.UpdateText(bufferRange.VertexOffset, numChars * 4, bufferRange.IndexOffset, numChars * 6);
 
 					return new TextGeometryHandle(
 						handle.GeometryID,
 						bufferRange.VertexOffset,
-						addedGeo.numVertices,
+						renderableCharCount * 4,
 						bufferRange.IndexOffset,
-						addedGeo.numIndices
+						renderableCharCount * 6
 					);
 				}
 			}
 
-			var newGeo = GenerateTextGeometry(
+			numChars = GenerateTextGeometry(
 				handle.GeometryID, text,
 				handle.BufferRange.VertexOffset, handle.BufferRange.IndexOffset,
 				fillColor, strokeColor
 			);
 
-			int lengthDelta = newGeo.numVertices - handle.BufferRange.VertexCount;
+			int lengthDelta = numChars * 4 - handle.BufferRange.VertexCount;
 			if (lengthDelta < 0)
 			{
 				//Invalidate geometryid for the remaining verts.
@@ -341,21 +355,21 @@ namespace MonoMSDF
 				int indexStart = handle.BufferRange.IndexOffset + (handle.BufferRange.VertexCount / 4 * 6) + (lengthDelta / 4 * 6);
 				int indexLength = -(lengthDelta / 4 * 6);
 
-				Allocator.Free(new BufferRange(vertStart, vertLength, indexStart, indexLength));
+				TextBuffer.Allocator.Free(new BufferRange(vertStart, vertLength, indexStart, indexLength));
 				TextBuffer.InvalidateRange(vertStart, vertLength);
 			}
 
-			handle.BufferRange.VertexCount = newGeo.numVertices;
-			handle.BufferRange.IndexCount = newGeo.numIndices;
+			handle.BufferRange.VertexCount = numChars * 4;
+			handle.BufferRange.IndexCount = numChars * 6;
 
-			TextBuffer.UpdateText(handle.BufferRange.VertexOffset, newGeo.numVertices, handle.BufferRange.IndexOffset, newGeo.numIndices);
+			TextBuffer.UpdateText(handle.BufferRange.VertexOffset, numChars * 4, handle.BufferRange.IndexOffset, numChars * 6);
 
 			return new TextGeometryHandle(
 				handle.GeometryID,
 				handle.BufferRange.VertexOffset,
-				newGeo.numVertices,
+				numChars * 4,
 				handle.BufferRange.IndexOffset,
-				newGeo.numIndices
+				numChars * 6
 			);
 		}
 
@@ -406,7 +420,7 @@ namespace MonoMSDF
 			return;
 		}
 
-		private (int numVertices, int numIndices) GenerateTextGeometry(
+		private int GenerateTextGeometry(
 			int geometryId,
 			string text,
 			int vertexOffset,
@@ -420,8 +434,7 @@ namespace MonoMSDF
 			float y = position.Y - glyphAtlas.Metrics.Ascender;
 
 			int vertexIndex = vertexOffset;
-			int indicesIndex = indexOffset;
-			int triangles = 0;
+			int numChars = 0;
 
 			for (int i = 0; i < text.Length; i++)
 			{
@@ -464,15 +477,7 @@ namespace MonoMSDF
 				TextBuffer.Vertices[vertexIndex + 2] = new VertexFont(new Vector2(glyphRight, -glyphTop), new Vector2(texRight, texTop), fillColor, strokeColor, geometryId);
 				TextBuffer.Vertices[vertexIndex + 3] = new VertexFont(new Vector2(glyphLeft, -glyphTop), new Vector2(texLeft, texTop), fillColor, strokeColor, geometryId);
 
-				TextBuffer.Indices[indicesIndex++] = (short)vertexIndex;
-				TextBuffer.Indices[indicesIndex++] = (short)(vertexIndex + 2);
-				TextBuffer.Indices[indicesIndex++] = (short)(vertexIndex + 1);
-				TextBuffer.Indices[indicesIndex++] = (short)vertexIndex;
-				TextBuffer.Indices[indicesIndex++] = (short)(vertexIndex + 3);
-				TextBuffer.Indices[indicesIndex++] = (short)(vertexIndex + 2);
-
 				vertexIndex += 4;
-				triangles += 2;
 
 				if (i < text.Length - 2 && kerningPairs.TryGetValue((text[i], text[i + 1]), out float kern))
 				{
@@ -480,9 +485,10 @@ namespace MonoMSDF
 				}
 
 				x += glyph.Advance;
+				numChars++;
 			}
 
-			return new(vertexIndex - vertexOffset, indicesIndex - indexOffset);
+			return numChars;
 		}
 
 		public void Dispose()
@@ -496,33 +502,36 @@ namespace MonoMSDF
 	// Supporting class for dynamic text buffer management
 	public class DynamicTextBuffer : IDisposable
 	{
+		public int MaxCharacters;
 		private readonly GraphicsDevice graphicsDevice;
-		public DynamicVertexBuffer VertexBuffer { get; private set; }
-		public DynamicIndexBuffer IndexBuffer { get; private set; }
-		public DynamicVertexBuffer InstanceBuffer { get; private set; }
-		public VertexBufferBinding[] VertexBufferBindings { get; private set; }
+		public DynamicVertexBuffer VertexBuffer;
+		public DynamicIndexBuffer IndexBuffer;
+		public DynamicVertexBuffer InstanceBuffer;
+		public VertexBufferBinding[] VertexBufferBindings;
 
 		public VertexFont[] Vertices;
 		public short[] Indices;
 		public TextInstance[] Instances;
 
 		private readonly int vertexFontStride;
+		public BufferAllocator Allocator;
 
 		public DynamicTextBuffer(GraphicsDevice graphicsDevice, int maxCharacters)
 		{
+			MaxCharacters = maxCharacters;
 			vertexFontStride = Marshal.SizeOf<VertexFont>();
 
 			this.graphicsDevice = graphicsDevice;
 
-			Vertices = new VertexFont[maxCharacters * 4];
-			Indices = new short[maxCharacters * 6];
+			Vertices = new VertexFont[MaxCharacters * 4];
+			Indices = new short[MaxCharacters * 6];
 			Instances = new TextInstance[16];
 
 			// Create dynamic vertex buffer
 			VertexBuffer = new DynamicVertexBuffer(
 				graphicsDevice,
 				typeof(VertexFont),
-				maxCharacters * 4, // 4 vertices per character
+				MaxCharacters * 4, // 4 vertices per character
 				BufferUsage.WriteOnly
 			);
 
@@ -530,7 +539,7 @@ namespace MonoMSDF
 			IndexBuffer = new DynamicIndexBuffer(
 				graphicsDevice,
 				IndexElementSize.SixteenBits,
-				maxCharacters * 6, // 6 indices per character (2 triangles)
+				MaxCharacters * 6, // 6 indices per character (2 triangles)
 				BufferUsage.WriteOnly
 			);
 
@@ -545,6 +554,10 @@ namespace MonoMSDF
 			VertexBufferBindings = new VertexBufferBinding[2];
 			VertexBufferBindings[0] = new VertexBufferBinding(VertexBuffer, 0, 0);
 			VertexBufferBindings[1] = new VertexBufferBinding(InstanceBuffer, 0, 1);
+
+			Allocator = new BufferAllocator(Vertices.Length, Indices.Length, this);
+
+			GenerateQuadIndices();
 		}
 
 		public void UpdateText(int vertexStartIndex, int vertexCount, int indexStartIndex, int indexCount)
@@ -587,28 +600,54 @@ namespace MonoMSDF
 			VertexBuffer.SetData(offsetInBytes, Vertices, startIndex, count, vertexFontStride, SetDataOptions.None);
 		}
 
-		public void Dispose()
+		public void ResizeVBO()
 		{
-			VertexBuffer?.Dispose();
-			IndexBuffer?.Dispose();
+			MaxCharacters *= 2;
+
+			Array.Resize(ref Vertices, Vertices.Length * 2);
+			Array.Resize(ref Indices, Indices.Length * 2);
+
+			// Create dynamic vertex buffer
+			VertexBuffer = new DynamicVertexBuffer(
+				graphicsDevice,
+				typeof(VertexFont),
+				Vertices.Length, // 4 vertices per character
+				BufferUsage.WriteOnly
+			);
+
+			// Create dynamic index buffer
+			IndexBuffer = new DynamicIndexBuffer(
+				graphicsDevice,
+				IndexElementSize.SixteenBits,
+				Indices.Length, // 6 indices per character (2 triangles)
+				BufferUsage.WriteOnly
+			);
+
+			GenerateQuadIndices();
+
+			VertexBufferBindings[0] = new VertexBufferBinding(VertexBuffer, 0, 0);
 		}
 
-		private void ResizeBuffersIfNeeded(int newVertexCount, int newIndexCount)
+		public void GenerateQuadIndices()
 		{
-			if (newVertexCount > VertexBuffer.VertexCount)
-			{
-				VertexBuffer?.Dispose();
-				VertexBuffer = new DynamicVertexBuffer(graphicsDevice, typeof(VertexFont), newVertexCount, BufferUsage.WriteOnly);
-			}
+			int indicesIndex = 0;
+			int vertexIndex = 0;
 
-			if (newIndexCount > IndexBuffer.IndexCount)
+			for (int i = 0; i < MaxCharacters; i++)
 			{
-				IndexBuffer?.Dispose();
-				IndexBuffer = new DynamicIndexBuffer(graphicsDevice, IndexElementSize.SixteenBits, newIndexCount, BufferUsage.WriteOnly);
+				Indices[indicesIndex++] = (short)(vertexIndex + 0);
+				Indices[indicesIndex++] = (short)(vertexIndex + 2);
+				Indices[indicesIndex++] = (short)(vertexIndex + 1);
+
+				Indices[indicesIndex++] = (short)(vertexIndex + 0);
+				Indices[indicesIndex++] = (short)(vertexIndex + 3);
+				Indices[indicesIndex++] = (short)(vertexIndex + 2);
+
+				vertexIndex += 4;
 			}
 		}
 
-		public void ResizeToIfNeeded()
+		public void ResizeInstanceBuffer()
 		{
 			Array.Resize(ref Instances, Instances.Length * 2);
 
@@ -619,6 +658,12 @@ namespace MonoMSDF
 				BufferUsage.WriteOnly
 			);
 			VertexBufferBindings[1] = new VertexBufferBinding(InstanceBuffer, 0, 1);
+		}
+
+		public void Dispose()
+		{
+			VertexBuffer?.Dispose();
+			IndexBuffer?.Dispose();
 		}
 	}
 
