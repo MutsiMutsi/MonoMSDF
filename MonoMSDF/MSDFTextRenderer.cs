@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 
 namespace MonoMSDF
 {
-	[StructLayout(LayoutKind.Sequential, Pack = 16)]
+	[StructLayout(LayoutKind.Sequential)]
 	public struct VertexFont : IVertexType
 	{
 		public Vector2 Position;
@@ -33,7 +33,7 @@ namespace MonoMSDF
 		);
 	}
 
-	[StructLayout(LayoutKind.Sequential, Pack = 16)]
+	[StructLayout(LayoutKind.Sequential)]
 	public struct TextInstance
 	{
 		public Matrix WorldTransform;      // 64 bytes
@@ -140,26 +140,9 @@ namespace MonoMSDF
 				}
 			}
 
-			//Detect if we're running out of space.
-			var lastBuf = FreeRanges[FreeRanges.Count - 1];
-			if (nextVertexOffset + vertexCount > lastBuf.VertexOffset + lastBuf.VertexCount)
-			{
-				Debug.WriteLine($"Old VBO size {_buffer.Vertices.Length}");
-				_buffer.ResizeVBO();
-				lastBuf.VertexCount += _buffer.Vertices.Length / 2;
-				lastBuf.IndexCount += _buffer.Indices.Length / 2;
-				FreeRanges[FreeRanges.Count - 1] = lastBuf;
-
-				Debug.WriteLine($"{nextVertexOffset + vertexCount} more than {lastBuf.VertexOffset + lastBuf.VertexCount}");
-				Debug.WriteLine($"New VBO size {_buffer.Vertices.Length}");
-			}
-
-			// Fallback: append at end
-			var fallback = new BufferRange(nextVertexOffset, vertexCount, nextIndexOffset, indexCount);
-			nextVertexOffset += vertexCount;
-			nextIndexOffset += indexCount;
-
-			return fallback;
+			_buffer.ResizeVBO();
+			Free(new (_buffer.Vertices.Length / 2, _buffer.Vertices.Length / 2, _buffer.Indices.Length / 2, _buffer.Indices.Length / 2));
+			return Allocate(vertexCount);
 		}
 
 		public void Free(BufferRange range)
@@ -213,7 +196,7 @@ namespace MonoMSDF
 			this.graphicsDevice = graphicsDevice;
 			this.msdifEffect = msdifEffect;
 
-			TextBuffer = new DynamicTextBuffer(graphicsDevice, 64);
+			TextBuffer = new DynamicTextBuffer(graphicsDevice, 14);
 
 			// Create sampler state for texture filtering
 			samplerState = new SamplerState
@@ -290,7 +273,7 @@ namespace MonoMSDF
 				fillColor, strokeColor
 			);
 
-			TextBuffer.UpdateText(bufferRange.VertexOffset, bufferRange.VertexCount, bufferRange.IndexOffset, bufferRange.IndexCount);
+				TextBuffer.UpdateText(bufferRange.VertexOffset, bufferRange.VertexCount, bufferRange.IndexOffset, bufferRange.IndexCount);
 
 			geometryCount++;
 
@@ -331,10 +314,7 @@ namespace MonoMSDF
 
 					return new TextGeometryHandle(
 						handle.GeometryID,
-						bufferRange.VertexOffset,
-						renderableCharCount * 4,
-						bufferRange.IndexOffset,
-						renderableCharCount * 6
+						bufferRange
 					);
 				}
 			}
@@ -371,6 +351,12 @@ namespace MonoMSDF
 				handle.BufferRange.IndexOffset,
 				numChars * 6
 			);
+		}
+
+		public void FreeGeometry(BufferRange range)
+		{
+			TextBuffer.Allocator.Free(range);
+			TextBuffer.InvalidateRange(range.VertexOffset, range.VertexCount);
 		}
 
 		public void RenderInstances(Matrix view, Matrix projection, FontDrawType drawType = FontDrawType.StandardText)
@@ -412,7 +398,7 @@ namespace MonoMSDF
 				PrimitiveType.TriangleList,
 				baseVertex: 0,
 				startIndex: 0,
-				primitiveCount: TextBuffer.Vertices.Length / 3,
+				primitiveCount: TextBuffer.Vertices.Length / 2,
 				instanceCount: instanceCount
 			);
 
@@ -573,17 +559,6 @@ namespace MonoMSDF
 				vertexFontStride,
 				SetDataOptions.None
 			);
-
-			// Index buffer
-			int indexOffsetBytes = indexStartIndex * sizeof(ushort);
-
-			IndexBuffer.SetData(
-				indexOffsetBytes,
-				Indices,
-				indexStartIndex,
-				indexCount,
-				SetDataOptions.None
-			);
 		}
 
 		public unsafe void InvalidateRange(int startIndex, int count)
@@ -645,6 +620,14 @@ namespace MonoMSDF
 
 				vertexIndex += 4;
 			}
+
+			IndexBuffer.SetData(
+				0,
+				Indices,
+				0,
+				MaxCharacters * 6,
+				SetDataOptions.None
+			);
 		}
 
 		public void ResizeInstanceBuffer()
