@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using Microsoft.Xna.Framework;
+using System.Text.Json.Serialization;
 
 namespace MonoMSDF;
 
@@ -27,6 +28,8 @@ public class Glyph
 	public float Advance { get; set; }
 	public Bounds PlaneBounds { get; set; }
 	public Bounds AtlasBounds { get; set; }
+
+	public Vector2[] TextureCoordinates { get; set; }
 }
 
 public class Kerning
