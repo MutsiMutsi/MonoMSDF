@@ -66,7 +66,7 @@ _textRenderer.Stylizer.AddRule(new StyleRule("Excalibur", StyleID));
 _textRenderer.Stylizer.AddTag(new TagDefinition("<!", "!>", StyleID));
 ```
 Following this example, any text rendered that contains the word "Excalibur" will have its style applied automatically, additionally any text that is surrounded with <! and !> will also have this style applied.
-There is one **caveat** to ensure styling is as blazing fast as rendering, prefix any part of text eliglbe for styling with a pipe character '|'.
+There is one **caveat** to ensure styling is as blazing fast as rendering, prefix any part of text eligible for styling with a pipe character '|'.
 
 This ensures that we are not constantly scanning all text for possible word and start tags. So in the case of Excalibur we could have a text input of `"I think |Excalibur is the best sword ever!"`.
 
@@ -86,7 +86,7 @@ _textRenderer.AddTextInstance(position, fontSizeInPixelHeight, handle.GeometryID
 __Note: adding instances is super lightweight, and you are expected to do this every frame, for as long as you want to see the text show up. It does not persist.__
 
 The justification to have all this additional complexity (believe me there's a ton going on in the backend to make all this happen) is that in games text rarely changes every single frame.
-Tons and tons of computation is wated on reconstructing the text geometry over and over every single frame just to display that yes, you health is still 100/100.
+Tons and tons of computation is wasted on reconstructing the text geometry over and over every single frame just to display that yes, you health is still 100/100.
 Now with this handle you can replace the geometry from "health 100/100" to "health 99/100" only when its required to do so. 
 So here we see how to **replace static text**.
 ```c#
