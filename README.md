@@ -65,7 +65,7 @@ _textRenderer.Stylizer.AddRule(new StyleRule("Excalibur", StyleID));
 //Or by custom begin/end tag matching
 _textRenderer.Stylizer.AddTag(new TagDefinition("<!", "!>", StyleID));
 ```
-Following this example, any text rendered that contains the word "Excalibur" will have its style applied automatically, additionally any text that is surrounded with < and > will also have this style applied.
+Following this example, any text rendered that contains the word "Excalibur" will have its style applied automatically, additionally any text that is surrounded with <! and !> will also have this style applied.
 There is one **caveat** to ensure styling is as blazing fast as rendering, prefix any part of text eliglbe for styling with a pipe character '|'.
 
 This ensures that we are not constantly scanning all text for possible word and start tags. So in the case of Excalibur we could have a text input of `"I think |Excalibur is the best sword ever!"`.
