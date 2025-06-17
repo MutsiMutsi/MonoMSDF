@@ -42,13 +42,10 @@ Init and Loading
 private MSDFTextRenderer _textRenderer;
 
 //Initialize/LoadContent:
-Effect fx = Content.Load<Effect>("msdf_effect");
-_textRenderer = new MSDFTextRenderer(GraphicsDevice, fx);
+_textRenderer = new MSDFTextRenderer(GraphicsDevice, Content);
 //Then load your atlas data
 _textRenderer.LoadAtlas("your_font_atlas.json", "your_font_atlas.png");
 ```
-The msdf_effect file is included in this repo, you are expected to add this to your monogame project content, in the future I think I will ship releases of this library with compiled fx files so this step is no longer required.
-However in this early stage, it is what it is, at least this will make changing and adding features to the shader trivial.
 
 Optionally styles and rules
 ```c#
