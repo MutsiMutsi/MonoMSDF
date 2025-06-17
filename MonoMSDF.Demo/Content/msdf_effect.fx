@@ -20,6 +20,7 @@ sampler2D SpriteTextureSampler = sampler_state
 
 float4x4 WorldViewProjection;
 float2 AtlasSize;
+float ZoomLevel;
 
 // Vertex shader input structure
 struct VertexShaderInput
@@ -86,6 +87,11 @@ VertexShaderOutput MainVS(VertexShaderInput input)
     // Pass through instance data for distancerange and pxrange
     output.PixelRanges = input.PixelRanges;
     
+   // float2 scale = float2(length(WorldViewProjection._11_12), length(WorldViewProjection._21_22));
+   // output.PixelRanges.x /= scale.x;
+    
+    output.PixelRanges.x *= ZoomLevel;
+    
     return output;
 }
 
@@ -140,6 +146,11 @@ float4 MainPS(VertexShaderOutput input) : COLOR
 // MSDF pixel shader with stroke support (using your existing ScreenPxRange)
 float4 StrokedPS(VertexShaderOutput input) : COLOR
 {
+    if (input.StrokeColor.a == 0.0)
+    {
+        return MainPS(input);
+    }
+    
     float3 msd = tex2D(SpriteTextureSampler, input.TextureCoordinates).rgb;
     float medianSample = median(msd.r, msd.g, msd.b);
     float signedDistance = medianSample - 0.5;

@@ -20,9 +20,9 @@
 /processorParam:TextureFormat=Compressed
 /build:consola.spritefont
 
-#begin msdf_ps.fx
+#begin msdf_effect.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
-/build:msdf_ps.fx
+/build:msdf_effect.fx
 
