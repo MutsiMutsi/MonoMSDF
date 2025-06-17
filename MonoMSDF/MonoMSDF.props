@@ -1,0 +1,13 @@
+﻿<Project>
+
+  <PropertyGroup>
+    <MonoMSDFPath>$([System.IO.Path]::Combine($(MSBuildThisFileDirectory),"Content/Content.mgcb"))</MonoMSDFPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <MonoGameContentReference Include="$(MonoMSDFPath)">
+      <Link>Content/%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </MonoGameContentReference>
+  </ItemGroup>
+
+</Project>

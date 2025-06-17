@@ -1,4 +1,4 @@
-﻿using MGSDF_Demo;
+﻿using MonoMSDF.Demo;
 
 using var game = new Game1();
 game.Run();

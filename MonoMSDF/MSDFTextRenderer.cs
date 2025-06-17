@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Runtime.InteropServices;
@@ -58,11 +59,11 @@ namespace MonoMSDF
 			}
 		}
 
-		public MSDFTextRenderer(GraphicsDevice graphicsDevice, Effect msdifEffect)
+		public MSDFTextRenderer(GraphicsDevice graphicsDevice, ContentManager contentManager)
 		{
 			this.graphicsDevice = graphicsDevice;
-			this.msdifEffect = msdifEffect;
-
+			this.msdifEffect = contentManager.Load<Effect>("msdf_effect");
+			
 			TextBuffer = new DynamicTextBuffer(graphicsDevice, 64);
 
 			// Create sampler state for texture filtering

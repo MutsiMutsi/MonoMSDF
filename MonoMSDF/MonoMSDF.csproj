@@ -14,4 +14,24 @@
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.4" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="MonoMSDF.props" PackagePath="build/" />
+
+    <None Include="Content/msdf_effect.fx">
+      <Pack>true</Pack>
+      <PackageCopyToOutput>true</PackageCopyToOutput>
+      <PackageFlatten>true</PackageFlatten>
+      <PackagePath>build/Content/</PackagePath>
+      <CopyToOutputDirectory></CopyToOutputDirectory>
+    </None>
+
+    <None Include="Content/Content.mgcb">
+      <Pack>true</Pack>
+      <PackageCopyToOutput>true</PackageCopyToOutput>
+      <PackageFlatten>true</PackageFlatten>
+      <PackagePath>build/Content/</PackagePath>
+      <CopyToOutputDirectory></CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
