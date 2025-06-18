@@ -11,10 +11,17 @@ Benchmarked to outperform all other implementations in static text, and dynamic 
 
 # Features
 
-- Render any text at any scale at any screen space position without having to reconstruct geometry.
-- If you do want to change text, reuse the buffer space for blazing fast in-place vertex data updates.
-- The option the style any range of text up to a single character, defined by dictionary matching, or begin and end tags.
-- If you do not care for the optimal performance by using the static geometry and buffer swapping, you have the ability to automatically create and destroy text geometry every frame for simplicity.
+- [x] Render any text at any scale at any screen space position without having to reconstruct geometry.
+- [x] If you do want to change text, reuse the buffer space for blazing fast in-place vertex data updates.
+- [x] The option to style any range of text up to a single character, defined by dictionary matching, or begin and end tags.
+- [x] If you do not care for the optimal performance through using the static geometry and buffer swapping, you have the ability to automatically create and destroy text geometry every frame for simplicity.
+- [ ] Restyle geometry without having to reconstruct quad pos/texcoords (optimization)
+- [ ] Compound geometry allows for instance to reuse "Health" text geometry with for example "100/100" and "50/"100" into "Health 100/100" and "Health 50/50".
+- [ ] Integrate msdf-atlas-gen tool (initially windows only) to allow for zero setup, just supply a ttf/otf.
+- [ ] Cross platform the msdf-atlas-gen implementation somehow to allow Linux and MacOS to also have zero setup
+- [ ] Support dynamic atlas building at runtime, add glyphs on demand.
+- [ ] Implementation to support multiple fonts in a single atlas so that no texture swaps are neccesary
+- [ ] Many more style and customization options, there are never enough. But never compromise on performance.
 
 # How to use
 
