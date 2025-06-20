@@ -25,7 +25,36 @@ Benchmarked to outperform all other implementations in static text, and dynamic 
 
 # How to use
 
-### The Setup
+### Automatic Atlas Generation (currently WINDOWS ONLY)
+
+It is now possible to automatically build all fonts found within your content path to be built into atlasses.
+
+This is for convenience and ease of onboarding, for the most control and settings refer to manual atlas generation.
+
+To enable the automated process simply add this at the end of your game's csproj file:
+```xml
+  <!-- Atlas Builder -->
+  <Import Project="$(MSBuildThisFileDirectory)..\AtlasBuilder\AtlasBuilder.targets" />
+```
+This will automatically pickup all ttf and otf fonts within your content folder, including subfolders, you dont have to add anything to the MonoGame pipeline editor.
+
+If for some reason you dont want all fonts within your content folder turned into atlasses, you can configure which folder to search.
+Additionally you can also configure the output folder, and the size and distance settings for the MSDF atlas generation, like so:
+
+```xml
+  <!-- Atlas Builder -->
+  <Import Project="$(MSBuildThisFileDirectory)..\AtlasBuilder\AtlasBuilder.targets" />
+  <PropertyGroup>
+    <ContentFolder>YouChoose/APath/ToSearchFor/FontInputFiles</ContentFolder>
+    <OutputFolder>YouChoose/APath/ToSaveThe/AtlasOutputFiles</OutputFolder>
+    <FontSize>48.0</FontSize>
+    <DistanceRange>6.0</DistanceRange>
+  </PropertyGroup>
+```
+
+Once configured every time you add a font file or build your project, all fonts that are not yet built, or were modified, are built into font atlasses automatically.
+
+### Manual Atlas Generation
 
 First create an MSDF atlas using either:
 - https://msdf-bmfont.donmccurdy.com/
