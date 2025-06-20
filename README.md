@@ -17,7 +17,7 @@ Benchmarked to outperform all other implementations in static text, and dynamic 
 - [x] If you do not care for the optimal performance through using the static geometry and buffer swapping, you have the ability to automatically create and destroy text geometry every frame for simplicity.
 - [ ] Restyle geometry without having to reconstruct quad pos/texcoords (optimization)
 - [ ] Compound geometry allows for instance to reuse "Health" text geometry with for example "100/100" and "50/"100" into "Health 100/100" and "Health 50/50".
-- [ ] Integrate msdf-atlas-gen tool (initially windows only) to allow for zero setup, just supply a ttf/otf.
+- [x] Integrate msdf-atlas-gen tool (initially windows only) to allow for zero setup, just supply a ttf/otf.
 - [ ] Cross platform the msdf-atlas-gen implementation somehow to allow Linux and MacOS to also have zero setup
 - [ ] Support dynamic atlas building at runtime, add glyphs on demand.
 - [ ] Implementation to support multiple fonts in a single atlas so that no texture swaps are neccesary
