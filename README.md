@@ -33,9 +33,15 @@ This is for convenience and ease of onboarding, for the most control and setting
 
 To enable the automated process simply add this at the end of your game's csproj file:
 ```xml
-  <!-- Atlas Builder -->
-  <Import Project="$(MSBuildThisFileDirectory)..\AtlasBuilder\AtlasBuilder.targets" />
+<!-- Atlas Builder -->
+<Import Project="..\AtlasBuilder\AtlasBuilder.targets" />
 ```
+If you don't know the path to AtlasBuilder or how to find it, simply refer to the line in your csproj that includes the MonoMSDF library:
+```xml
+<ProjectReference Include="..\MonoMSDF\MonoMSDF.csproj" />
+```
+The path is the exact same, except you can replace MonoMSDF with AtlasBuilder, since they exist right next to eachother.
+
 This will automatically pickup all ttf and otf fonts within your content folder, including subfolders, you dont have to add anything to the MonoGame pipeline editor.
 
 If for some reason you dont want all fonts within your content folder turned into atlasses, you can configure which folder to search.
