@@ -89,7 +89,9 @@ namespace MonoMSDF.Demo
 
 			//Initialize the text renderer
 			_textRenderer = new MSDFTextRenderer(GraphicsDevice, Content);
-			_ = _textRenderer.LoadAtlas("king.json", "king.png");
+			_ = _textRenderer.LoadAtlas("Content/Fonts/Kingthings_Petrock.json", "Content/Fonts/Kingthings_Petrock.png");
+
+			//bool built = Builder.GenerateFontAtlasTask.GenerateAtlas("C:\\Windows\\Fonts\\consola.ttf", 32.0, 8.0);
 
 			//Create a new custom style and add it to the stylizers.
 			excaliburStyle = new MyCustomStyle();
@@ -102,9 +104,9 @@ namespace MonoMSDF.Demo
 
 			//Add some word matching style rules
 			_textRenderer.Stylizer.AddRule(new StyleRule(
-				"Excalibur",
-				0
-			));
+					"Excalibur",
+					0
+				));
 			_textRenderer.Stylizer.AddRule(new StyleRule(
 				"EXCALIBUR",
 				0

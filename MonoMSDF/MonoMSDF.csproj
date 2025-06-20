@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.4" />
+    <PackageReference Include="MonoGame.Framework.Native" Version="3.8.4" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,6 +32,10 @@
       <PackagePath>build/Content/</PackagePath>
       <CopyToOutputDirectory></CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AtlasBuilder\AtlasBuilder.csproj" />
   </ItemGroup>
 
 </Project>

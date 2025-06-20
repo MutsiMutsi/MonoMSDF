@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMSDF", "MonoMSDF\MonoMS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoMSDF.Demo", "MonoMSDF.Demo\MonoMSDF.Demo.csproj", "{1A24CFB4-449E-6DF6-81B7-6227AE084718}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AtlasBuilder", "AtlasBuilder\AtlasBuilder.csproj", "{3B306BFB-5B4F-4DDD-9C9C-FADD45C436FB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{1A24CFB4-449E-6DF6-81B7-6227AE084718}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1A24CFB4-449E-6DF6-81B7-6227AE084718}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1A24CFB4-449E-6DF6-81B7-6227AE084718}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3B306BFB-5B4F-4DDD-9C9C-FADD45C436FB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3B306BFB-5B4F-4DDD-9C9C-FADD45C436FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3B306BFB-5B4F-4DDD-9C9C-FADD45C436FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3B306BFB-5B4F-4DDD-9C9C-FADD45C436FB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
