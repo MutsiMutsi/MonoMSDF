@@ -1,0 +1,23 @@
+<Project>
+  
+  <!-- Atlas Builder Task -->
+  <UsingTask TaskName="AtlasBuilder.BuildAtlasTask" AssemblyFile="$(MSBuildThisFileDirectory)\bin\$(Configuration)\netstandard2.0\AtlasBuilder.dll" />
+
+  <Target Name="BuildAtlasTask" AfterTargets="CoreCompile">
+    <!-- Set default paths if not provided -->
+    <PropertyGroup>
+      <MonoGameContentFolder Condition="'$(MonoGameContentFolder)' == ''">$(ProjectDir)Content</MonoGameContentFolder>
+      <FontAtlasOutputFolder Condition="'$(FontAtlasOutputFolder)' == ''">$([System.IO.Path]::GetFullPath('$(OutputPath)Content\Fonts'))</FontAtlasOutputFolder>
+      <FontSize Condition="'$(FontSize)' == ''">32.0</FontSize>
+      <DistanceRange Condition="'$(DistanceRange)' == ''">6.0</DistanceRange>
+    </PropertyGroup>
+
+    <!-- Run the task -->
+    <BuildAtlasTask
+      ContentFolder="$(MonoGameContentFolder)"
+      OutputFolder="$(FontAtlasOutputFolder)"
+      FontSize="$(FontSize)"
+      DistanceRange="$(DistanceRange)" 
+    />
+  </Target>
+</Project>
