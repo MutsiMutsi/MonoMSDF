@@ -3,7 +3,7 @@
   <!-- Atlas Builder Task -->
   <UsingTask TaskName="AtlasBuilder.BuildAtlasTask" AssemblyFile="$(MSBuildThisFileDirectory)\bin\$(Configuration)\netstandard2.0\AtlasBuilder.dll" />
 
-  <Target Name="MSDFAtlasBuild" AfterTargets="CoreCompile">
+  <Target Name="BuildAtlasTask" AfterTargets="CoreCompile">
     <!-- Set default paths if not provided -->
     <PropertyGroup>
       <MonoGameContentFolder Condition="'$(MonoGameContentFolder)' == ''">$(ProjectDir)Content</MonoGameContentFolder>
@@ -12,18 +12,6 @@
       <DistanceRange Condition="'$(DistanceRange)' == ''">6.0</DistanceRange>
     </PropertyGroup>
 
-    <ItemGroup>
-        <FontInput Include="$(MonoGameContentFolder)/**/*.ttf;$(MonoGameContentFolder)/**/*.otf"/>
-        <FontOutput Include="$(FontAtlasOutputFolder)/%(FontInput.RecursiveDir)%(FontInput.Filename).json;$(FontAtlasOutputFolder)/%(FontInput.RecursiveDir)%(FontInput.Filename).png"/>
-    </ItemGroup>
-
-  </Target>
-
-  <!-- This will be called UNLESS 'Inputs' are up-to-date with 'Outputs' -->
-  <Target Name="ExecuteBuildAtlasTask" 
-		  Inputs="@(FontInput)" 
-		  Outputs="@(FontOutput)" 
-		  AfterTargets="MSDFAtlasBuild">
     <!-- Run the task -->
     <BuildAtlasTask
       ContentFolder="$(MonoGameContentFolder)"
