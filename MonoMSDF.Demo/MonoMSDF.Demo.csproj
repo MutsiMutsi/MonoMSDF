@@ -46,6 +46,6 @@
     <FontSize>48.0</FontSize>
     <DistanceRange>6.0</DistanceRange>
   </PropertyGroup>
-  <Import Project="..\AtlasBuilder\AtlasBuilder.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)..\AtlasBuilder\AtlasBuilder.targets" />
 
 </Project>
