@@ -45,6 +45,8 @@ namespace AtlasBuilder
 				{
 					Directory.CreateDirectory(OutputFolder);
 				}
+				
+				var areAllUpToDate = true;
 
 				foreach (var fontFile in fontFiles)
 				{
@@ -53,7 +55,6 @@ namespace AtlasBuilder
 					var outputJsonPath = Path.Combine(OutputFolder, $"{fontName}.json");
 					var outputPngPath = Path.Combine(OutputFolder, $"{fontName}.png");
 
-					var areAllUpToDate = true;
 
 					// Check if rebuild is needed
 					if (ShouldRebuildAtlas(fontFile, outputJsonPath, outputPngPath))
@@ -78,10 +79,10 @@ namespace AtlasBuilder
 						Log.LogMessage(MessageImportance.Normal, $"{fontName} atlas is up to date");
 					}
 
-					if (areAllUpToDate)
-                        Log.LogMessage(MessageImportance.High, "All atlases are up to date");
-
                 }
+				
+				if (areAllUpToDate)
+                    Log.LogMessage(MessageImportance.High, "All atlases are up to date");
 
 
 				return true;
