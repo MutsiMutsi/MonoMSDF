@@ -32,9 +32,8 @@ namespace AtlasBuilder
 
 				// Find all font files in content folder
 				var fontExtensions = new[] { ".ttf", ".otf" };
-				var fontFiles = Directory.GetFiles(ContentFolder, "*.*", SearchOption.AllDirectories)
-					.Where(f => fontExtensions.Contains(Path.GetExtension(f).ToLower()))
-					.ToArray();
+				var fontFiles = Directory.EnumerateFiles(ContentFolder, "*.*", SearchOption.AllDirectories)
+					.Where(f => fontExtensions.Contains(Path.GetExtension(f).ToLower()));
 
 				if (!fontFiles.Any())
 				{
@@ -47,34 +46,42 @@ namespace AtlasBuilder
 					Directory.CreateDirectory(OutputFolder);
 				}
 
-				for (int i = 0; i < fontFiles.Length; i++)
+				foreach (var fontFile in fontFiles)
 				{
 
-					string fontName = Path.GetFileNameWithoutExtension(fontFiles[i]);
+					string fontName = Path.GetFileNameWithoutExtension(fontFile);
 					var outputJsonPath = Path.Combine(OutputFolder, $"{fontName}.json");
 					var outputPngPath = Path.Combine(OutputFolder, $"{fontName}.png");
 
+					var areAllUpToDate = true;
+
 					// Check if rebuild is needed
-					if (ShouldRebuildAtlas(fontFiles[i], outputJsonPath, outputPngPath))
+					if (ShouldRebuildAtlas(fontFile, outputJsonPath, outputPngPath))
 					{
 						Log.LogMessage(MessageImportance.High, "Font atlas needs rebuilding...");
 
 						// Call your interop library here
-						var success = GenerateAtlas(fontFiles[i], outputPngPath, outputJsonPath);
+						var success = GenerateAtlas(fontFile, outputPngPath, outputJsonPath);
 
-						if (!success)
+                        if (!success)
 						{
 							Log.LogError("Failed to generate font atlas");
 							return false;
 						}
 
-						Log.LogMessage(MessageImportance.High, $"{fontName} atlas generated successfully");
+						areAllUpToDate = false;
+
+                        Log.LogMessage(MessageImportance.High, $"{fontName} atlas generated successfully");
 					}
 					else
 					{
 						Log.LogMessage(MessageImportance.Normal, $"{fontName} atlas is up to date");
 					}
-				}
+
+					if (areAllUpToDate)
+                        Log.LogMessage(MessageImportance.High, "All atlases are up to date");
+
+                }
 
 
 				return true;
