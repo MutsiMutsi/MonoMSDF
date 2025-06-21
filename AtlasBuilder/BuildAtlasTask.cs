@@ -28,13 +28,12 @@ namespace AtlasBuilder
 		{
 			try
 			{
-				Log.LogMessage(MessageImportance.High, $"Running Build Atlas Task...");
+				Log.LogMessage(MessageImportance.Normal, $"Running Build Atlas Task...");
 
 				// Find all font files in content folder
 				var fontExtensions = new[] { ".ttf", ".otf" };
-				var fontFiles = Directory.GetFiles(ContentFolder, "*.*", SearchOption.AllDirectories)
-					.Where(f => fontExtensions.Contains(Path.GetExtension(f).ToLower()))
-					.ToArray();
+				var fontFiles = Directory.EnumerateFiles(ContentFolder, "*.*", SearchOption.AllDirectories)
+					.Where(f => fontExtensions.Contains(Path.GetExtension(f).ToLower()));
 
 				if (!fontFiles.Any())
 				{
@@ -47,35 +46,26 @@ namespace AtlasBuilder
 					Directory.CreateDirectory(OutputFolder);
 				}
 
-				for (int i = 0; i < fontFiles.Length; i++)
+				foreach (var fontFile in fontFiles)
 				{
 
-					string fontName = Path.GetFileNameWithoutExtension(fontFiles[i]);
+					string fontName = Path.GetFileNameWithoutExtension(fontFile);
 					var outputJsonPath = Path.Combine(OutputFolder, $"{fontName}.json");
 					var outputPngPath = Path.Combine(OutputFolder, $"{fontName}.png");
 
-					// Check if rebuild is needed
-					if (ShouldRebuildAtlas(fontFiles[i], outputJsonPath, outputPngPath))
+					Log.LogMessage(MessageImportance.High, "Font atlas needs rebuilding...");
+
+					// Call your interop library here
+					var success = GenerateAtlas(fontFile, outputPngPath, outputJsonPath);
+
+					if (!success)
 					{
-						Log.LogMessage(MessageImportance.High, "Font atlas needs rebuilding...");
-
-						// Call your interop library here
-						var success = GenerateAtlas(fontFiles[i], outputPngPath, outputJsonPath);
-
-						if (!success)
-						{
-							Log.LogError("Failed to generate font atlas");
-							return false;
-						}
-
-						Log.LogMessage(MessageImportance.High, $"{fontName} atlas generated successfully");
+						Log.LogError("Failed to generate font atlas");
+						return false;
 					}
-					else
-					{
-						Log.LogMessage(MessageImportance.Normal, $"{fontName} atlas is up to date");
-					}
+
+					Log.LogMessage(MessageImportance.High, $"{fontName} atlas generated successfully");
 				}
-
 
 				return true;
 			}
@@ -84,21 +74,6 @@ namespace AtlasBuilder
 				Log.LogError($"Error generating font atlas: {ex.Message}");
 				return false;
 			}
-		}
-
-		private bool ShouldRebuildAtlas(string fontFile, string jsonPath, string pngPath)
-		{
-			// Check if output files exist
-			if (!File.Exists(jsonPath) || !File.Exists(pngPath))
-				return true;
-
-			// Get the oldest output file time
-			var jsonTime = File.GetLastWriteTime(jsonPath);
-			var pngTime = File.GetLastWriteTime(pngPath);
-			var oldestOutputTime = jsonTime < pngTime ? jsonTime : pngTime;
-
-			// Check if any font file is newer than output
-			return File.GetLastWriteTime(fontFile) > oldestOutputTime;
 		}
 
 		private bool GenerateAtlas(string fontFile, string pngPath, string jsonPath)
