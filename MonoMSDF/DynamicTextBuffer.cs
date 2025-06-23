@@ -70,7 +70,7 @@ namespace MonoMSDF
 			GenerateQuadIndices();
 		}
 
-		public void UpdateText(int vertexStartIndex, int vertexCount, int indexStartIndex, int indexCount)
+		public void UpdateText(int vertexStartIndex, int vertexCount)
 		{
 			// Vertex buffer
 			int vertexOffsetBytes = vertexStartIndex * vertexFontStride;
@@ -81,11 +81,11 @@ namespace MonoMSDF
 				vertexStartIndex,
 				vertexCount,
 				vertexFontStride,
-				SetDataOptions.None
+				SetDataOptions.NoOverwrite
 			);
 		}
 
-		public unsafe void InvalidateRange(int startIndex, int count)
+		/*public unsafe void InvalidateRange(int startIndex, int count)
 		{
 			int offsetInBytes = startIndex * vertexFontStride;
 
@@ -97,7 +97,7 @@ namespace MonoMSDF
 
 			// Push the zeroed portion directly to the GPU
 			VertexBuffer.SetData(offsetInBytes, Vertices, startIndex, count, vertexFontStride, SetDataOptions.None);
-		}
+		}*/
 
 		public void ResizeVBO()
 		{
@@ -160,7 +160,7 @@ namespace MonoMSDF
 				Indices,
 				0,
 				MaxCharacters * 6,
-				SetDataOptions.None
+				SetDataOptions.NoOverwrite
 			);
 		}
 

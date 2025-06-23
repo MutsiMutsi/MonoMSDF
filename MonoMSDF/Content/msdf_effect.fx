@@ -3,8 +3,8 @@
 #define VS_SHADERMODEL vs_3_0
 #define PS_SHADERMODEL ps_3_0
 #else
-#define VS_SHADERMODEL vs_4_0_level_9_1
-#define PS_SHADERMODEL ps_4_0_level_9_1
+#define VS_SHADERMODEL vs_4_0
+#define PS_SHADERMODEL ps_4_0
 #endif
 
 // Texture and sampler
@@ -30,7 +30,9 @@ struct VertexShaderInput
     float2 TextureCoordinates : TEXCOORD0;
     float4 FillColor : COLOR0;
     float4 StrokeColor : COLOR1;
-    float GeometryID : TEXCOORD7;
+    
+    //DX Only:
+    uint vertexID : SV_VertexID;
     
     //Instanced data
     float4 WorldMatrixRow0 : TEXCOORD1;
@@ -38,7 +40,8 @@ struct VertexShaderInput
     float4 WorldMatrixRow2 : TEXCOORD3;
     float4 WorldMatrixRow3 : TEXCOORD4;
     float2 PixelRanges : TEXCOORD5;
-    float InstanceID : TEXCOORD6;
+    
+    float2 VertexRange : TEXCOORD6;
 };
 
 // Vertex shader output structure
@@ -56,7 +59,8 @@ struct VertexShaderOutput
 VertexShaderOutput MainVS(VertexShaderInput input)
 {
     VertexShaderOutput output;
-    if (input.InstanceID != input.GeometryID)
+    
+    if (input.vertexID < input.VertexRange.x || input.vertexID >= input.VertexRange.y)
     {
         output.FillColor = float4(0, 0, 0, 0);
         output.PixelRanges = 0.0;
@@ -117,17 +121,6 @@ float2 SafeNormalize(float2 v)
     return v * vLength;
 }
 
-float GetOpacityFromDistance(float signedDistance, float distanceRange, float2 Jdx, float2 Jdy)
-{
-    const float distanceLimit = sqrt(2.0f) / 2.0f;
-    const float thickness = 1.0f / distanceRange;
-    float2 gradientDistance = SafeNormalize(float2(ddx(signedDistance), ddy(signedDistance)));
-    float2 gradient = float2(gradientDistance.x * Jdx.x + gradientDistance.y * Jdy.x, gradientDistance.x * Jdx.y + gradientDistance.y * Jdy.y);
-    float scaledDistanceLimit = min(thickness * distanceLimit * length(gradient), 0.5f);
-
-    return smoothstep(-scaledDistanceLimit, scaledDistanceLimit, signedDistance);
-}
-
 // Standard MSDF pixel shader
 float4 MainPS(VertexShaderOutput input) : COLOR
 {
@@ -172,43 +165,6 @@ float4 StrokedPS(VertexShaderOutput input) : COLOR
     return float4(finalColor.rgb, finalColor.a * max(opacity, strokeOpacity));
 }
 
-// Small text optimized MSDF pixel shader
-float4 SmallTextPS(VertexShaderOutput input) : COLOR
-{
-    float2 pixelCoord = input.TextureCoordinates * AtlasSize;
-    float2 Jdx = ddx(pixelCoord);
-    float2 Jdy = ddy(pixelCoord);
-    float3 sample = tex2D(SpriteTextureSampler, input.TextureCoordinates).rgb;
-    float signedDistance = median(sample) - 0.5f;
-    
-    float opacity = GetOpacityFromDistance(signedDistance, input.PixelRanges.y, Jdx, Jdy);
-    float4 color;
-
-    color.a = pow(abs(input.FillColor.a * opacity), 1.0f / 2.2f); // Correct for gamma, 2.2 is a valid gamma for most LCD monitors.
-    color.rgb = input.FillColor.rgb;
-
-    return color;
-}
-
-// Small text with stroke support
-float4 StrokedSmallTextPS(VertexShaderOutput input) : COLOR
-{
-    float2 pixelCoord = input.TextureCoordinates * AtlasSize;
-    float2 Jdx = ddx(pixelCoord);
-    float2 Jdy = ddy(pixelCoord);
-    float medianSample = median(tex2D(SpriteTextureSampler, input.TextureCoordinates).rgb);
-    float signedDistance = medianSample - 0.5f;
-
-    const float strokeThickness = 0.1875f;
-    float strokeDistance = -(abs(medianSample - 0.25f - strokeThickness) - strokeThickness);
-
-    float opacity = GetOpacityFromDistance(signedDistance, input.PixelRanges.y, Jdx, Jdy);
-    float strokeOpacity = GetOpacityFromDistance(strokeDistance, input.PixelRanges.y, Jdx, Jdy);
-    
-    float4 strokeColor = input.StrokeColor;
-    return lerp(strokeColor, input.FillColor, opacity) * max(opacity, strokeOpacity);
-}
-
 // Main technique for standard MSDF text rendering
 technique MSDFTextRendering
 {
@@ -230,29 +186,5 @@ technique MSDFTextWithStroke
             MainVS();
         PixelShader = compile PS_SHADERMODEL
             StrokedPS();
-    }
-}
-
-// Technique optimized for small text rendering
-technique MSDFSmallText
-{
-    pass P0
-    {
-        VertexShader = compile VS_SHADERMODEL
-            MainVS();
-        PixelShader = compile PS_SHADERMODEL
-            SmallTextPS();
-    }
-}
-
-// Technique for small text with stroke
-technique MSDFSmallTextWithStroke
-{
-    pass P0
-    {
-        VertexShader = compile VS_SHADERMODEL
-            MainVS();
-        PixelShader = compile PS_SHADERMODEL
-            StrokedSmallTextPS();
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace MonoMSDF.Demo
 {
@@ -17,6 +18,8 @@ namespace MonoMSDF.Demo
 
 		private static float totalTime = 0f;
 		public Camera2D camera;
+
+		private BufferDebugDraw debugDraw;
 
 		private class MyCustomStyle : GlyphStyle
 		{
@@ -72,6 +75,7 @@ namespace MonoMSDF.Demo
 		public Game1()
 		{
 			_graphics = new GraphicsDeviceManager(this);
+			_graphics.GraphicsProfile = GraphicsProfile.HiDef;
 			Content.RootDirectory = "Content";
 			IsMouseVisible = true;
 
@@ -112,6 +116,8 @@ namespace MonoMSDF.Demo
 				0
 			));
 
+			_textRenderer.Stylizer.AddTag(new TagDefinition("<", ">", 0));
+			_textRenderer.Stylizer.AddTag(new TagDefinition("123", "321", 0));
 
 			//Create some static text geometry
 			textHandles.Add(_textRenderer.GenerateGeometry("I am looking for the |<legendary> sword that goes by the name of |Excalibur.", Color.White, Color.Transparent));
@@ -119,7 +125,23 @@ namespace MonoMSDF.Demo
 			textHandles.Add(_textRenderer.GenerateGeometry("|EXCALIBUR", Color.White, Color.Transparent));
 			textHandles.Add(_textRenderer.GenerateGeometry("Wait this Excalibur is |123fake321, |it doesn't quite shine like the others.!", Color.White, Color.Transparent));
 
+			debugDraw = new BufferDebugDraw(_textRenderer, _spriteBatch, GraphicsDevice);
 		}
+
+		public static string GenerateRandomString(int length)
+		{
+			const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+			Random random = new Random();
+			StringBuilder stringBuilder = new StringBuilder(length);
+
+			for (int i = 0; i < length; i++)
+			{
+				stringBuilder.Append(chars[random.Next(chars.Length)]);
+			}
+
+			return stringBuilder.ToString();
+		}
+
 		protected override void Update(GameTime gameTime)
 		{
 			if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
@@ -139,21 +161,14 @@ namespace MonoMSDF.Demo
 				totalTime += (float)gameTime.ElapsedGameTime.TotalSeconds;
 				excaliburStyle.Update();
 
-				textHandles[0] = _textRenderer.ReplaceGeometry(textHandles[0], "I am looking for the |<legendary> sword that goes by the name of |Excalibur.", Color.White, Color.Transparent);
-				textHandles[1] = _textRenderer.ReplaceGeometry(textHandles[1], "You have found the sword of |Excalibur may you wield it with honour.", Color.White, Color.Transparent);
-				textHandles[2] = _textRenderer.ReplaceGeometry(textHandles[2], "|EXCALIBUR", Color.White, Color.Transparent);
-				textHandles[3] = _textRenderer.ReplaceGeometry(textHandles[3], "Wait this Excalibur is |123fake321, |it doesn't quite shine like the others.!", Color.White, Color.Transparent);
+				textHandles[0] = _textRenderer.ReplaceGeometry(textHandles[0], GenerateRandomString(128), Color.White, Color.Transparent);
+				textHandles[1] = _textRenderer.ReplaceGeometry(textHandles[1], GenerateRandomString(128), Color.White, Color.Transparent);
+				textHandles[2] = _textRenderer.ReplaceGeometry(textHandles[2], GenerateRandomString(128), Color.White, Color.Transparent);
+				textHandles[3] = _textRenderer.ReplaceGeometry(textHandles[3], GenerateRandomString(128), Color.White, Color.Transparent);
 			}
 
-			//Add the instances so we can actually see our 4 text geometries.
-			_textRenderer.AddTextInstance(new Vector2(8, 8), 16f, textHandles[0].GeometryID);
-			_textRenderer.AddTextInstance(new Vector2(8, 32f), 32f, textHandles[1].GeometryID);
-			_textRenderer.AddTextInstance(new Vector2(8, 48f), 256f, textHandles[2].GeometryID);
-			_textRenderer.AddTextInstance(new Vector2(8, 256f + 48f), 24f, textHandles[3].GeometryID);
 
-			//Immediate drawing, this is less efficient, but sure is a lot more convenient.
-			_textRenderer.OneShotText("The above text geometry is static, hold space to update the geometry.", new Vector2(8, 512), 32f, Color.MonoGameOrange, Color.Black);
-			_textRenderer.OneShotText("Hold enter to zoom in and out", new Vector2(8, 512 + 40f), 32f, Color.CornflowerBlue, Color.Black);
+
 
 			base.Update(gameTime);
 		}
@@ -162,8 +177,30 @@ namespace MonoMSDF.Demo
 		protected override void Draw(GameTime gameTime)
 		{
 			GraphicsDevice.Clear(new Color(55, 47, 58));
+
+			//Add the instances so we can actually see our 4 text geometries.
+			_textRenderer.AddTextInstance(new Vector2(8, 8), 16f, textHandles[0].BufferRange);
+			_textRenderer.AddTextInstance(new Vector2(8, 32f), 32f, textHandles[1].BufferRange);
+			_textRenderer.AddTextInstance(new Vector2(8, 48f), 256f, textHandles[2].BufferRange);
+			_textRenderer.AddTextInstance(new Vector2(8, 256f + 48f), 24f, textHandles[3].BufferRange);
+
+			//Immediate drawing, this is less efficient, but sure is a lot more convenient.
+			_textRenderer.OneShotText("The above text geometry is static, hold space to update the geometry.", new Vector2(8, 512), 32f, Color.MonoGameOrange, Color.Black);
+			_textRenderer.OneShotText("Hold enter to zoom in and out", new Vector2(8, 512 + 40f), 32f, Color.CornflowerBlue, Color.Black);
+
+			//Tell the renderer to draw all the instances of text we added above.
 			_textRenderer.RenderInstances(camera.TransformMatrix, Matrix.CreateOrthographicOffCenter(0, 1920, 1080, 0, -1f, 1f), FontDrawType.StandardTextWithStroke);
+
+			_spriteBatch.Begin();
+			debugDraw.DrawVertexBuffer(16, 16, 16);
+			_spriteBatch.End();
+
 			base.Draw(gameTime);
+		}
+
+		protected override void EndDraw()
+		{
+			base.EndDraw();
 		}
 	}
 }

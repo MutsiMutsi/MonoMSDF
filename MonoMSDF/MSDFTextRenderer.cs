@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using System;
+using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 
 namespace MonoMSDF
@@ -63,7 +64,7 @@ namespace MonoMSDF
 		{
 			this.graphicsDevice = graphicsDevice;
 			this.msdifEffect = contentManager.Load<Effect>("msdf_effect");
-			
+
 			TextBuffer = new DynamicTextBuffer(graphicsDevice, 64);
 
 			// Create sampler state for texture filtering
@@ -169,13 +170,13 @@ namespace MonoMSDF
 			return new ProcessedText(tempBuffer.Slice(0, writeIndex), renderableCount);
 		}
 
-		public void AddTextInstance(Vector2 position, float scale, int geometryIndex)
+		public void AddTextInstance(Vector2 position, float scale, BufferRange buffer)
 		{
 			Matrix transform = Matrix.CreateScale(scale) * Matrix.CreateTranslation(position.X, position.Y, 0);
-			AddTextInstance(transform, scale, geometryIndex);
+			AddTextInstance(transform, scale, buffer);
 		}
 
-		public void AddTextInstance(Matrix transform, float scale, int geometryIndex)
+		public void AddTextInstance(Matrix transform, float scale, BufferRange buffer)
 		{
 			//Resize instances if we need to.
 			if (instanceCount >= TextBuffer.Instances.Length)
@@ -189,7 +190,7 @@ namespace MonoMSDF
 			float pixelRange = glyphAtlas.Atlas.DistanceRange;
 			float screenPxRange = sizeInPixel / sizeInEm * pixelRange;
 
-			TextBuffer.Instances[instanceCount] = new TextInstance(transform, screenPxRange, glyphAtlas.Atlas.DistanceRange, geometryIndex);
+			TextBuffer.Instances[instanceCount] = new TextInstance(transform, screenPxRange, glyphAtlas.Atlas.DistanceRange, buffer.VertexOffset, buffer.VertexOffset + buffer.VertexCount);
 			instanceCount++;
 		}
 
@@ -264,16 +265,14 @@ namespace MonoMSDF
 			var bufferRange = TextBuffer.Allocate(processedText.RenderableCharCount * 4);
 
 			GenerateTextGeometry(
-				geometryCount,
 				processedText.RenderableChars,
 				bufferRange.VertexOffset, bufferRange.IndexOffset,
 				fillColor, strokeColor
 			);
 
-			TextBuffer.UpdateText(bufferRange.VertexOffset, bufferRange.VertexCount, bufferRange.IndexOffset, bufferRange.IndexCount);
+			TextBuffer.UpdateText(bufferRange.VertexOffset, bufferRange.VertexCount);
 
 			return new TextGeometryHandle(
-				geometryCount,
 				bufferRange
 			);
 		}
@@ -289,26 +288,25 @@ namespace MonoMSDF
 			if (handle.BufferRange.VertexCount < processedText.RenderableCharCount * 4)
 			{
 				TextBuffer.Free(handle.BufferRange);
-				TextBuffer.InvalidateRange(handle.BufferRange.VertexOffset, handle.BufferRange.VertexCount);
+				//TextBuffer.InvalidateRange(handle.BufferRange.VertexOffset, handle.BufferRange.VertexCount);
 
 				var bufferRange = TextBuffer.Allocate(processedText.RenderableCharCount * 4);
 
 				GenerateTextGeometry(
-				   handle.GeometryID, processedText.RenderableChars,
+				   processedText.RenderableChars,
 				   bufferRange.VertexOffset, bufferRange.IndexOffset,
 				   fillColor, strokeColor
 			   );
 
-				TextBuffer.UpdateText(bufferRange.VertexOffset, processedText.RenderableCharCount * 4, bufferRange.IndexOffset, processedText.RenderableCharCount * 6);
+				TextBuffer.UpdateText(bufferRange.VertexOffset, processedText.RenderableCharCount * 4);
 
 				return new TextGeometryHandle(
-					handle.GeometryID,
 					bufferRange
 				);
 			}
 
 			GenerateTextGeometry(
-				handle.GeometryID, processedText.RenderableChars,
+				processedText.RenderableChars,
 				handle.BufferRange.VertexOffset, handle.BufferRange.IndexOffset,
 				fillColor, strokeColor
 			);
@@ -324,16 +322,15 @@ namespace MonoMSDF
 				int indexLength = -(lengthDelta / 4 * 6);
 
 				TextBuffer.Free(new BufferRange(vertStart, vertLength, indexStart, indexLength));
-				TextBuffer.InvalidateRange(vertStart, vertLength);
+				//TextBuffer.InvalidateRange(vertStart, vertLength);
 			}
 
 			handle.BufferRange.VertexCount = processedText.RenderableCharCount * 4;
 			handle.BufferRange.IndexCount = processedText.RenderableCharCount * 6;
 
-			TextBuffer.UpdateText(handle.BufferRange.VertexOffset, processedText.RenderableCharCount * 4, handle.BufferRange.IndexOffset, processedText.RenderableCharCount * 6);
+			TextBuffer.UpdateText(handle.BufferRange.VertexOffset, processedText.RenderableCharCount * 4);
 
 			return new TextGeometryHandle(
-				handle.GeometryID,
 				handle.BufferRange.VertexOffset,
 				processedText.RenderableCharCount * 4,
 				handle.BufferRange.IndexOffset,
@@ -349,40 +346,21 @@ namespace MonoMSDF
 			// Assuming reasonable max text length, adjust as needed
 			Span<DrawGlyph> tempBuffer = stackalloc DrawGlyph[text.Length];
 			var processedText = preprocessText(text, ref tempBuffer);
-
 			var bufferRange = TextBuffer.Allocate(processedText.RenderableCharCount * 4);
 
 			GenerateTextGeometry(
-				-oneshotCount, processedText.RenderableChars,
+				processedText.RenderableChars,
 				bufferRange.VertexOffset, bufferRange.IndexOffset,
 				fillColor, strokeColor
 			);
 
-			TextBuffer.UpdateText(bufferRange.VertexOffset, bufferRange.VertexCount, bufferRange.IndexOffset, bufferRange.IndexCount);
-			AddTextInstance(Matrix.CreateScale(sizePx) * Matrix.CreateTranslation(position.X, position.Y, 0f), sizePx, -oneshotCount);
+			TextBuffer.UpdateText(bufferRange.VertexOffset, bufferRange.VertexCount);
+			AddTextInstance(Matrix.CreateScale(sizePx) * Matrix.CreateTranslation(position.X, position.Y, 0f), sizePx, bufferRange);
 			oneShotBuffers.Add(new(bufferRange, 1));
-		}
-
-		public void FreeGeometry(BufferRange range)
-		{
-			TextBuffer.Free(range);
-			TextBuffer.InvalidateRange(range.VertexOffset, range.VertexCount);
 		}
 
 		public void RenderInstances(Matrix view, Matrix projection, FontDrawType drawType = FontDrawType.StandardText)
 		{
-			//free up the one shot geometry.
-			for (int i = 0; i < oneShotBuffers.Count; i++)
-			{
-				oneShotBuffers[i] = new(oneShotBuffers[i].range, oneShotBuffers[i].lifeTime - 1);
-				if (oneShotBuffers[i].lifeTime == -1)
-				{
-					FreeGeometry(oneShotBuffers[i].range);
-					oneShotBuffers.RemoveAt(i);
-					i--;
-				}
-			}
-
 			if (atlasTexture == null || msdifEffect == null || instanceCount == 0)
 			{
 				return;
@@ -402,10 +380,10 @@ namespace MonoMSDF
 			graphicsDevice.Textures[0] = atlasTexture;
 			graphicsDevice.SamplerStates[0] = samplerState;
 
-			graphicsDevice.SetVertexBuffers(TextBuffer.VertexBufferBindings);
 			graphicsDevice.Indices = TextBuffer.IndexBuffer;
-
 			TextBuffer.InstanceBuffer.SetData(TextBuffer.Instances, 0, instanceCount, SetDataOptions.NoOverwrite);
+
+			graphicsDevice.SetVertexBuffers(TextBuffer.VertexBufferBindings);
 
 			graphicsDevice.DrawInstancedPrimitives(
 				PrimitiveType.TriangleList,
@@ -419,6 +397,14 @@ namespace MonoMSDF
 			instanceCount = 0;
 			oneshotCount = 0;
 
+			//free up the one shot geometry.
+			for (int i = 0; i < oneShotBuffers.Count; i++)
+			{
+				TextBuffer.Free(oneShotBuffers[i].range);
+				oneShotBuffers.RemoveAt(i);
+				i--;
+			}
+
 			return;
 		}
 
@@ -426,7 +412,6 @@ namespace MonoMSDF
 		private Color[] strokeColorsCache = new Color[4];
 
 		private int GenerateTextGeometry(
-			int geometryId,
 			ReadOnlySpan<DrawGlyph> text,
 			int vertexOffset,
 			int indexOffset,
@@ -502,10 +487,10 @@ namespace MonoMSDF
 				float glyphRight = x + glyph.PlaneBounds.right;
 				float glyphTop = y + glyph.PlaneBounds.top;
 
-				TextBuffer.Vertices[vertexIndex] = new VertexFont(new Vector2(glyphLeft, -glyphBottom), glyph.TextureCoordinates[0], fillColorsCache[0], strokeColorsCache[0], geometryId);
-				TextBuffer.Vertices[vertexIndex + 1] = new VertexFont(new Vector2(glyphRight, -glyphBottom), glyph.TextureCoordinates[1], fillColorsCache[1], strokeColorsCache[1], geometryId);
-				TextBuffer.Vertices[vertexIndex + 2] = new VertexFont(new Vector2(glyphRight, -glyphTop), glyph.TextureCoordinates[2], fillColorsCache[2], strokeColorsCache[2], geometryId);
-				TextBuffer.Vertices[vertexIndex + 3] = new VertexFont(new Vector2(glyphLeft, -glyphTop), glyph.TextureCoordinates[3], fillColorsCache[3], strokeColorsCache[3], geometryId);
+				TextBuffer.Vertices[vertexIndex] = new VertexFont(new Vector2(glyphLeft, -glyphBottom), glyph.TextureCoordinates[0], fillColorsCache[0], strokeColorsCache[0]);
+				TextBuffer.Vertices[vertexIndex + 1] = new VertexFont(new Vector2(glyphRight, -glyphBottom), glyph.TextureCoordinates[1], fillColorsCache[1], strokeColorsCache[1]);
+				TextBuffer.Vertices[vertexIndex + 2] = new VertexFont(new Vector2(glyphRight, -glyphTop), glyph.TextureCoordinates[2], fillColorsCache[2], strokeColorsCache[2]);
+				TextBuffer.Vertices[vertexIndex + 3] = new VertexFont(new Vector2(glyphLeft, -glyphTop), glyph.TextureCoordinates[3], fillColorsCache[3], strokeColorsCache[3]);
 
 				vertexIndex += 4;
 

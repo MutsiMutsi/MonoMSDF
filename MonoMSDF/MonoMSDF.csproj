@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <PublishAot>true</PublishAot>
     <Nullable>disable</Nullable>
@@ -9,10 +9,6 @@
     <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="MonoGame.Framework.Native" Version="3.8.4" />
-  </ItemGroup>
 
   <ItemGroup>
     <Content Include="MonoMSDF.props" PackagePath="build/" />
@@ -32,6 +28,10 @@
       <PackagePath>build/Content/</PackagePath>
       <CopyToOutputDirectory></CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.4" />
   </ItemGroup>
 
   <ItemGroup>

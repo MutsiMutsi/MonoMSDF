@@ -1,23 +1,36 @@
-﻿using Microsoft.Xna.Framework.Graphics;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace MonoMSDF
 {
 	public class BufferDebugDraw
 	{
-		/*MSDFTextRenderer _textRenderer;
+		MSDFTextRenderer _textRenderer;
 		SpriteBatch _spriteBatch;
+		Texture2D nixel;
 
-		private void DrawVertexBuffer(int posX, int posY, int barHeight)
+
+		public BufferDebugDraw(MSDFTextRenderer textRenderer, SpriteBatch sb, GraphicsDevice gd)
+		{
+			this._textRenderer = textRenderer;
+			this._spriteBatch = sb;
+
+			nixel = new Texture2D(gd, 1, 1);
+			nixel.SetData([Color.White]);
+		}
+
+		public void DrawVertexBuffer(int posX, int posY, int barHeight)
 		{
 			int totalSize = _textRenderer.TextBuffer.Vertices.Length;
-			int totalUsed = totalSize - _textRenderer.TextBuffer.FreeRanges.Sum(o => o.VertexCount);
+			int usedVertices = 0;
+			var freeRanges = _textRenderer.TextBuffer.FreeRanges;
+			for (int i = 0; i < freeRanges.Count; i++)
+			{
+				usedVertices += freeRanges[i].VertexCount;
+			}
+			int totalUsed = totalSize - usedVertices;
 
-			_spriteBatch.DrawString(_fontSharp.GetFont(16), $"Vertex Buffer [{totalUsed}/{totalSize}]", new Vector2(posX, posY - 18), Color.White);
+			//_spriteBatch.DrawString(_fontSharp.GetFont(16), $"Vertex Buffer [{totalUsed}/{totalSize}]", new Vector2(posX, posY - 18), Color.White);
 			for (int i = 0; i < _textRenderer.TextBuffer.Vertices.Length; i++)
 			{
 				Color col = i % 2 == 0 ? new Color(255, 0, 0, 255) : new Color(0, 0, 0, 255);
@@ -42,10 +55,10 @@ namespace MonoMSDF
 
 		private void DrawIndexBuffer(int posX, int posY, int barHeight)
 		{
-			int totalUsed = textHandles.Sum(o => o.BufferRange.IndexCount);
+			/*int totalUsed = textHandles.Sum(o => o.BufferRange.IndexCount);
 			int totalSize = _textRenderer.TextBuffer.Indices.Length;
 
-			_spriteBatch.DrawString(_fontSharp.GetFont(16), $"Index Buffer [{totalUsed}/{totalSize}]", new Vector2(posX, posY - 18), Color.White);
+			//_spriteBatch.DrawString(_fontSharp.GetFont(16), $"Index Buffer [{totalUsed}/{totalSize}]", new Vector2(posX, posY - 18), Color.White);
 			for (int i = 0; i < _textRenderer.TextBuffer.Indices.Length; i++)
 			{
 				Color col = i % 2 == 0 ? new Color(128, 128, 0, 255) : new Color(0, 128, 128, 255);
@@ -64,5 +77,6 @@ namespace MonoMSDF
 				}
 			}
 		}*/
+		}
 	}
 }
