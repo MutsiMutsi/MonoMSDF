@@ -10,6 +10,15 @@
 
 #-------------------------------- References --------------------------------#
 
+/reference:..\..\MonoMSDF.Content.Pipeline\bin\Debug\net8.0\MonoMSDF.Content.Pipeline.dll
 
 #---------------------------------- Content ---------------------------------#
+
+#begin Kingthings_Petrock.ttf
+/importer:MSDFImporter
+/processor:MSDFProcessor
+/processorParam:FontSize=32
+/processorParam:DistanceRange=6
+/processorParam:PremultiplyAlpha=True
+/build:Kingthings_Petrock.ttf
 

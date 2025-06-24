@@ -34,8 +34,4 @@
     </None>
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\AtlasBuilder\AtlasBuilder.csproj" />
-  </ItemGroup>
-
 </Project>

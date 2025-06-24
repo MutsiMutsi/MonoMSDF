@@ -34,6 +34,9 @@
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.4" />
   </ItemGroup>
   <ItemGroup>
+	  <ProjectReference Include="..\MonoMSDF.Content.Pipeline\MonoMSDF.Content.Pipeline.csproj" >
+		  <PrivateAssets>All</PrivateAssets>
+	  </ProjectReference>
     <ProjectReference Include="..\MonoMSDF\MonoMSDF.csproj" />
   </ItemGroup>
   <Target Name="RestoreDotnetTools" BeforeTargets="CollectPackageReferences">
@@ -46,6 +49,5 @@
     <FontSize>48.0</FontSize>
     <DistanceRange>6.0</DistanceRange>
   </PropertyGroup>
-  <Import Project="$(MSBuildThisFileDirectory)..\AtlasBuilder\AtlasBuilder.targets" />
 
 </Project>
