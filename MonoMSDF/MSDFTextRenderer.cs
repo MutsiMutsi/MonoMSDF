@@ -9,12 +9,14 @@ namespace MonoMSDF
 	public class MSDFTextRenderer : IDisposable
 	{
 		private readonly GraphicsDevice graphicsDevice;
-		private readonly Effect msdifEffect;
+		private readonly Effect msdfEffect;
 
-		public Texture2D atlasTexture;
+		public MSDFAtlas msdfAtlas;
+
+		public Texture2D atlasTexture => msdfAtlas.Texture;
 		private readonly SamplerState samplerState;
 
-		private GlyphAtlas glyphAtlas;
+		private GlyphAtlas glyphAtlas => msdfAtlas.Metadata;
 		private readonly Dictionary<int, Glyph> glyphs = [];
 		private readonly Dictionary<(char, char), float> kerningPairs = [];
 
@@ -62,7 +64,7 @@ namespace MonoMSDF
 		public MSDFTextRenderer(GraphicsDevice graphicsDevice, ContentManager contentManager)
 		{
 			this.graphicsDevice = graphicsDevice;
-			this.msdifEffect = contentManager.Load<Effect>("msdf_effect");
+			this.msdfEffect = contentManager.Load<Effect>("msdf_effect");
 			
 			TextBuffer = new DynamicTextBuffer(graphicsDevice, 64);
 
@@ -74,12 +76,12 @@ namespace MonoMSDF
 				AddressV = TextureAddressMode.Clamp
 			};
 
-			drawTechniques[FontDrawType.StandardText] = msdifEffect.Techniques["MSDFTextRendering"];
-			drawTechniques[FontDrawType.StandardTextWithStroke] = msdifEffect.Techniques["MSDFTextWithStroke"];
-			drawTechniques[FontDrawType.TinyText] = msdifEffect.Techniques["MSDFSmallText"];
-			drawTechniques[FontDrawType.TinyTextWithStroke] = msdifEffect.Techniques["MSDFTextRendering"];
+			drawTechniques[FontDrawType.StandardText] = msdfEffect.Techniques["MSDFTextRendering"];
+			drawTechniques[FontDrawType.StandardTextWithStroke] = msdfEffect.Techniques["MSDFTextWithStroke"];
+			drawTechniques[FontDrawType.TinyText] = msdfEffect.Techniques["MSDFSmallText"];
+			drawTechniques[FontDrawType.TinyTextWithStroke] = msdfEffect.Techniques["MSDFTextRendering"];
 
-			matrixParameter = msdifEffect.Parameters["WorldViewProjection"];
+			matrixParameter = msdfEffect.Parameters["WorldViewProjection"];
 		}
 
 		private bool isWriteableChar(char c)
@@ -193,15 +195,17 @@ namespace MonoMSDF
 			instanceCount++;
 		}
 
-		public bool LoadAtlas(string jsonPath, string pngPath)
+
+		public bool LoadAtlas(string jsonPath, string pngPath) => LoadAtlas(MSDFAtlas.LoadFrom(graphicsDevice, pngPath, jsonPath));
+		public bool LoadAtlas(MSDFAtlas atlas) 
 		{
+			msdfAtlas = atlas;
+			
 			try
 			{
 				// Load and parse JSON
-				glyphAtlas = FontLoader.Load(jsonPath);
 				foreach (Glyph glyph in glyphAtlas.Glyphs)
 				{
-
 					//TODO: Is it worth putting these floats in a rectangle or 2x Vector2 instead of just keeping them as floats?
 					//x and y position will have to be added at runtime either way.
 					//float glyphLeft = x + glyph.PlaneBounds.left;
@@ -237,12 +241,9 @@ namespace MonoMSDF
 					kerningPairs[(left, right)] = advance;
 				}
 
-				// Load PNG texture using MonoGame's content pipeline or Texture2D.FromFile
-				atlasTexture = FontLoader.LoadTexture(graphicsDevice, pngPath);
-
 				//Set the params
-				msdifEffect.Parameters["SpriteTexture"].SetValue(atlasTexture);
-				msdifEffect.Parameters["AtlasSize"].SetValue(new Vector2(glyphAtlas.Atlas.Width, glyphAtlas.Atlas.Height));
+				msdfEffect.Parameters["SpriteTexture"].SetValue(atlasTexture);
+				msdfEffect.Parameters["AtlasSize"].SetValue(new Vector2(glyphAtlas.Atlas.Width, glyphAtlas.Atlas.Height));
 
 				return true;
 			}
@@ -383,17 +384,17 @@ namespace MonoMSDF
 				}
 			}
 
-			if (atlasTexture == null || msdifEffect == null || instanceCount == 0)
+			if (atlasTexture == null || msdfEffect == null || instanceCount == 0)
 			{
 				return;
 			}
 
 			Vector2 xBasis = new Vector2(view.M11, view.M12);
-			msdifEffect.Parameters["ZoomLevel"].SetValue(xBasis.Length());
+			msdfEffect.Parameters["ZoomLevel"].SetValue(xBasis.Length());
 
 			matrixParameter.SetValue(view * projection);
-			msdifEffect.CurrentTechnique = drawTechniques[drawType];
-			msdifEffect.CurrentTechnique.Passes[0].Apply();
+			msdfEffect.CurrentTechnique = drawTechniques[drawType];
+			msdfEffect.CurrentTechnique.Passes[0].Apply();
 
 			// Make sure graphics state is setup proper.
 			graphicsDevice.RasterizerState = RasterizerState.CullCounterClockwise;

@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Content.Pipeline.Graphics;
 using Microsoft.Xna.Framework.Content.Pipeline.Processors;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -36,7 +37,6 @@ class MSDFProcessor : ContentProcessor<MSDFImportResult, MSDFProcessResult>
 
     public override MSDFProcessResult Process(MSDFImportResult input, ContentProcessorContext context)
     {
-        Debugger.Launch();
         // GenerateAtlas
         GenerateAtlas(
             fontFileName: input.FontInput,
