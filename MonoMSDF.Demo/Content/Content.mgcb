@@ -17,8 +17,10 @@
 #begin Kingthings_Petrock.ttf
 /importer:MSDFImporter
 /processor:MSDFProcessor
-/processorParam:FontSize=32
+/processorParam:FontSize=48
 /processorParam:DistanceRange=6
 /processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Color
+/processorParam:GenerateMipmaps=False
 /build:Kingthings_Petrock.ttf
 

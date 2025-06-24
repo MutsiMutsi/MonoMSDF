@@ -87,9 +87,12 @@ namespace MonoMSDF.Demo
 		{
 			_spriteBatch = new SpriteBatch(GraphicsDevice);
 
+			//Load font using Content Pipeline
+			var atlas = Content.Load<MSDFAtlas>("Kingthings_Petrock");
+
 			//Initialize the text renderer
 			_textRenderer = new MSDFTextRenderer(GraphicsDevice, Content);
-			_ = _textRenderer.LoadAtlas("Content/Fonts/Kingthings_Petrock.json", "Content/Fonts/Kingthings_Petrock.png");
+			_ = _textRenderer.LoadAtlas(atlas);
 
 			//bool built = Builder.GenerateFontAtlasTask.GenerateAtlas("C:\\Windows\\Fonts\\consola.ttf", 32.0, 8.0);
 

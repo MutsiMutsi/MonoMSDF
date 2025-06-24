@@ -61,7 +61,8 @@ namespace MonoMSDF
 			}
 		}
 
-		public MSDFTextRenderer(GraphicsDevice graphicsDevice, ContentManager contentManager)
+		// TODO: Add posibility to provide msdf shader manually for those who wants to organize their Content files for example they don't want to add msdf_effect.fx in root directory
+		public MSDFTextRenderer(GraphicsDevice graphicsDevice, ContentManager contentManager )
 		{
 			this.graphicsDevice = graphicsDevice;
 			this.msdfEffect = contentManager.Load<Effect>("msdf_effect");

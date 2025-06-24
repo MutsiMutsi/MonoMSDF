@@ -9,7 +9,7 @@ namespace AtlasBuilder
 {
 	public class BuildAtlasTask : Task
 	{
-		[DllImport("..\\..\\..\\native\\win-x64\\CutlassWrapper.dll", CallingConvention = CallingConvention.Cdecl)]
+		[DllImport("..\\..\\..\\..\\native\\win-x64\\CutlassWrapper.dll", CallingConvention = CallingConvention.Cdecl)]
 		public static extern bool GenerateAtlas(string fontFileName, double fontSize, double distanceRange, string outputPng, string outputJson);
 
 		[Required]
