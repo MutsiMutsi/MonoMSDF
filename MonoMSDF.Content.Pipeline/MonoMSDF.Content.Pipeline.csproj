@@ -2,6 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
+	
   <ItemGroup>
     <PackageReference Include="MonoGame.Framework.Content.Pipeline" Version="3.8.*">
       <PrivateAssets>All</PrivateAssets>
@@ -10,8 +11,6 @@
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
 
-	  <!-- Pack -->
-	  
 	<None Include="..\native\**\*.*">
 	  <Link>native\%(RecursiveDir)%(Filename)%(Extension)</Link>
 	</None>

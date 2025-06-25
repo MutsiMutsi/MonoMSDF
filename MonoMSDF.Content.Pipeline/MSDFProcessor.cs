@@ -11,27 +11,26 @@ using System.Runtime.InteropServices;
 
 namespace MonoMSDF.Content.Pipeline;
 
-[ContentProcessor(DisplayName = "MSDF Processor")]
+[ContentProcessor(DisplayName = "MSDF Atlas Processor - MonoMSDF")]
 class MSDFProcessor : ContentProcessor<MSDFImportResult, MSDFProcessResult>
 {
 
     [DllImport("..\\..\\..\\..\\native\\win-x64\\CutlassWrapper.dll", CallingConvention = CallingConvention.Cdecl)]
     public static extern bool GenerateAtlas(string fontFileName, double fontSize, double distanceRange, string outputPng, string outputJson);
 
-
-    [ContentProcessor(DisplayName = "Font Size")]
+    [DisplayName("Font Size (In Atlas)")]
     public double FontSize { get; set; } = 32.0;
 
-    [ContentProcessor(DisplayName = "Distance Range")]
+    [DisplayName("Distance Range")]
     public double DistanceRange { get; set; } = 6.0;
 
-    [ContentProcessor(DisplayName = "Premultiply Alpha")]
+    [DisplayName("Premultiply Alpha")]
     public bool PremultiplyAlpha { get; set; } = true;
 
-    [ContentProcessor(DisplayName = "Texture Format")]
+    [DisplayName("Texture Format")]
     public TextureProcessorOutputFormat TextureFormat { get; set; }
 
-    [ContentProcessor(DisplayName = "Generate Mipmaps")]
+    [DisplayName("Generate Mipmaps")]
     public bool GenerateMipmaps { get; set; }
 
 

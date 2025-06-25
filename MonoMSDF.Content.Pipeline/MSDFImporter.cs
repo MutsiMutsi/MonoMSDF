@@ -9,7 +9,7 @@ namespace MonoMSDF.Content.Pipeline;
 // If the library supports multiple fonts at a time
 // might make it optional to read a json or a text file having all fonts needed
 // and that file would have extension .msdf
-[ContentImporter([".ttf", ".otf"], DisplayName = "MSDF Importer", DefaultProcessor = "MSDFProcessor")]
+[ContentImporter([".ttf", ".otf"], DisplayName = "MSDF Importer - MonoMSDF", DefaultProcessor = "MSDFProcessor")]
 public class MSDFImporter : ContentImporter<MSDFImportResult>
 {
     public override MSDFImportResult Import(string filename, ContentImporterContext context)

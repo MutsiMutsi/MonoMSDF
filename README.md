@@ -1,6 +1,6 @@
-# MonoMSDF
+<h1 align="center" >MonoMSDF</h1>
 
-A multi signed distance field text renderer for MonoGame.
+**A multi signed distance field text renderer for MonoGame.**
 
 For those that want sharper text, rich customization features, the best performance, rock solid kerning, zero heap allocations, thousands of dynamic and static lines of text.
 All of this typography glory is guaranteed to be drawn in a single draw call.
@@ -23,44 +23,44 @@ Benchmarked to outperform all other implementations in static text, and dynamic 
 - [ ] Implementation to support multiple fonts in a single atlas so that no texture swaps are neccesary
 - [ ] Many more style and customization options, there are never enough. But never compromise on performance.
 
-# How to use
+# How to use :
 
-### Automatic Atlas Generation (currently WINDOWS ONLY)
+## 1) Setup MonoMSDF
+> That's temporary step until we publish to Nuget
 
-It is now possible to automatically build all fonts found within your content path to be built into atlasses.
-
-This is for convenience and ease of onboarding, for the most control and settings refer to manual atlas generation.
-
-To enable the automated process simply add this at the end of your game's csproj file:
-```xml
-<!-- Atlas Builder -->
-<Import Project="..\AtlasBuilder\AtlasBuilder.targets" />
+Clone this on an empty folder. or inside of your game project for example
+```bash
+git clone https://github.com/MutsiMutsi/MonoMSDF.git
 ```
-If you don't know the path to AtlasBuilder or how to find it, simply refer to the line in your csproj that includes the MonoMSDF library:
+Make sure to add both `MonoMSDF/MonoMSDF.csproj` and `MonoMSDF/MonoMSDF.props` inside your Game `.csproj` :
 ```xml
-<ProjectReference Include="..\MonoMSDF\MonoMSDF.csproj" />
-```
-The path is the exact same, except you can replace MonoMSDF with AtlasBuilder, since they exist right next to eachother.
-
-This will automatically pickup all ttf and otf fonts within your content folder, including subfolders, you dont have to add anything to the MonoGame pipeline editor.
-
-If for some reason you dont want all fonts within your content folder turned into atlasses, you can configure which folder to search.
-Additionally you can also configure the output folder, and the size and distance settings for the MSDF atlas generation, like so:
-
-```xml
-  <!-- Atlas Builder -->
-  <Import Project="$(MSBuildThisFileDirectory)..\AtlasBuilder\AtlasBuilder.targets" />
-  <PropertyGroup>
-    <ContentFolder>YouChoose/APath/ToSearchFor/FontInputFiles</ContentFolder>
-    <OutputFolder>YouChoose/APath/ToSaveThe/AtlasOutputFiles</OutputFolder>
-    <FontSize>48.0</FontSize>
-    <DistanceRange>6.0</DistanceRange>
-  </PropertyGroup>
+<Project>
+  ..
+  <Import Project="relative/path/to/MonoMSDF/MonoMSDF.props" />
+  <ItemGroup>
+    <ProjectReference Include="relative/path/to/MonoMSDF/MonoMSDF.csproj" />
+  </ItemGroup>
+  ..
+</Project>
 ```
 
-Once configured every time you add a font file or build your project, all fonts that are not yet built, or were modified, are built into font atlasses automatically.
+## 2) Import the font
+### - Using Content Pipeline :
+> **Note:** The font processing works only on windows currently 
+(but the game can be built on any platform with the font normally)
 
-### Manual Atlas Generation
+First in same folder, run this in terminal :
+```
+dotnet build MonoMSDF.Content.Pipeline/MonoMSDF.Content.Pipeline.csproj -c Release
+```
+Then open mgcb editor > Click on the main node "Content" > Double click "References"
+
+After that press `Add` then navigate to the `MonoMSDF.Content.Pipeline/bin/Release/net8.0/MonoMSDF.Content.Pipeline.dll` and add it.
+
+Now you can add your ttf/otf font this should select `MSDF Importer` and `MSDF Atlas Processor` automatically.
+You can modify parameters as you wish.
+
+### - Manually :
 
 First create an MSDF atlas using either:
 - https://msdf-bmfont.donmccurdy.com/
@@ -76,32 +76,37 @@ A pxrange of 6 will guarantee crisp and glyph rendering at multiple orders of ma
 The charset param points to a text file containing a range of characters, to generate an atlas for just ASCII characters you can create a file `ascii_charset.txt` and fill it with text `[0x20, 0x7E]`.
 This will instruct the msdf-atlas-gen with the range of characters to stuff into the atlas. The range can be any UTF16 range, I've confirmed arabic and font awesome unicode emoji and symbols will both work.
 
-### The Runtime
+## 3) Runtime Setup
+Inside `Game1.cs` :
 
-Init and Loading
 ```c#
-//Create a text renderer
+// Create a field for text renderer
 private MSDFTextRenderer _textRenderer;
 
-//Initialize/LoadContent:
+
+/// Initialize/LoadContent ///
 _textRenderer = new MSDFTextRenderer(GraphicsDevice, Content);
-//Then load your atlas data
-_textRenderer.LoadAtlas("your_font_atlas.json", "your_font_atlas.png");
+// Then load your atlas data
+//   If font was added through Content Pipeline :
+_textRenderer.LoadAtlas(Content.Load<MSDFAtlas>("your_font_assetname")); 
+//   If atlas was manually generated :
+_textRenderer.LoadAtlas("your_font_atlas.json", "your_font_atlas.png"); 
+
 ```
 
 Optionally styles and rules
 ```c#
 
-//Optionally declare some cool styles which will be automatically applied to your matching texts
-//Implement a GlyphStyle class and add it to the styles, as in; public class MyCustomStyle : GlyphStyle is implemented.
+// Optionally declare some cool styles which will be automatically applied to your matching texts
+// Implement a GlyphStyle class and add it to the styles, as in; public class MyCustomStyle : GlyphStyle is implemented.
 var superCoolStyle = new MyCustomStyle();
 _textRenderer.Stylizer.Styles.Add(superCoolStyle);
 
-//Once you have a style declared you can define rules on which text this is applied to
-//Either by word matching:
+// Once you have a style declared you can define rules on which text this is applied to
+// Either by word matching:
 _textRenderer.Stylizer.AddRule(new StyleRule("Excalibur", StyleID));
 
-//Or by custom begin/end tag matching
+// Or by custom begin/end tag matching
 _textRenderer.Stylizer.AddTag(new TagDefinition("<!", "!>", StyleID));
 ```
 Following this example, any text rendered that contains the word "Excalibur" will have its style applied automatically, additionally any text that is surrounded with <! and !> will also have this style applied.
@@ -114,12 +119,12 @@ For a tag it would look like this: `"The following text |<!has the best styling 
 Now finally to render text, first I will show you how to render **static text**.
 The biggest gains made here as opposed to many other implementations is that the text geometry is only generated once, which means drawing static text is incredibly fast.
 ```c#
-//First we generate the geometry for the string.
+// First we generate the geometry for the string.
 var handle = _textRenderer.GenerateGeometry("Any text you would love to see\nNewlines are also supported!", fillColor, strokeColor);
-//This will return a TextGeometryHandle keep this safe somewhere, you will need this to free up the geometry, or replace the text.
+// This will return a TextGeometryHandle keep this safe somewhere, you will need this to free up the geometry, or replace the text.
 
-//You only have to generate this geometry, and this handle once. Once you have it you can draw this text as many times as you want, anywhere at any scale.
-//You can even draw the same text by this handle many times on the same screen practically without any performance hit, this is done through hardware instancing.
+// You only have to generate this geometry, and this handle once. Once you have it you can draw this text as many times as you want, anywhere at any scale.
+// You can even draw the same text by this handle many times on the same screen practically without any performance hit, this is done through hardware instancing.
 _textRenderer.AddTextInstance(position, fontSizeInPixelHeight, handle.GeometryID);
 ```
 __Note: adding instances is super lightweight, and you are expected to do this every frame, for as long as you want to see the text show up. It does not persist.__
@@ -139,7 +144,7 @@ This will generate geometry, create the instance for it, and will handle freeing
 _textRenderer.OneShotText("I am looking for the legendary sword that goes by the name of Excalibur.", new Vector2(8, 8), 16f, fillColor, strokeColor);
 ```
 
-## Finally show me the text already!
+## 4) Finally show me the text already!
 
 Once you've setup all your static text, instanced text, etc. It is time to finally render everything.
 
@@ -147,11 +152,11 @@ You simply call this in your draw path:
 ```c#
 _textRenderer.RenderInstances(viewMatrix, projectionMatrix, FontDrawType.StandardText);
 
-//Here's an example with a camera that can move, zoom, and rotate, for a 2d projection (1920x1080 viewport)
+// Here's an example with a camera that can move, zoom, and rotate, for a 2d projection (1920x1080 viewport)
 _textRenderer.RenderInstances(camera.TransformMatrix, Matrix.CreateOrthographicOffCenter(0, 1920, 1080, 0, -1f, 1f), FontDrawType.StandardText);
 
-//You are free to use any kind of view and projection matrix setup you want!
-//If youre not sure how this works, the simplest case for UI would be something like this:
+// You are free to use any kind of view and projection matrix setup you want!
+// If you're not sure how this works, the simplest case for UI would be something like this:
 _textRenderer.RenderInstances(Matrix.Identity, Matrix.CreateOrthographicOffCenter(0, screenwidth, screenheight, 0, -1f, 1f), FontDrawType.StandardText);
 ```
 Now what is FontDrawType? If you want to enable stroke around text, go for FontDrawType.StandardTextWithStroke then for all characters that have a stroke colour with an alpha > 0 will render out strokes.
