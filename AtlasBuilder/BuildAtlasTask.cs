@@ -37,7 +37,7 @@ namespace AtlasBuilder
 
 				if (!fontFiles.Any())
 				{
-					Log.LogMessage(MessageImportance.High, "No font files found.");
+					Log.LogMessage(MessageImportance.High, $"No font files found in: {ContentFolder}");
 					return true;
 				}
 

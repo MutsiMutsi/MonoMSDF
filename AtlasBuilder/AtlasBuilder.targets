@@ -1,7 +1,7 @@
 <Project>
   
   <!-- Atlas Builder Task -->
-  <UsingTask TaskName="AtlasBuilder.BuildAtlasTask" AssemblyFile="$(MSBuildThisFileDirectory)\bin\$(Configuration)\netstandard2.0\AtlasBuilder.dll" />
+  <UsingTask TaskName="AtlasBuilder.BuildAtlasTask" AssemblyFile="$(MSBuildThisFileDirectory)bin\$(Configuration)\netstandard2.0\AtlasBuilder.dll" />
 
   <Target Name="BuildAtlasTask" AfterTargets="CoreCompile">
     <!-- Set default paths if not provided -->

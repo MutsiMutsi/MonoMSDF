@@ -1,11 +1,12 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoMSDF;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace MonoMSDF.Demo
+namespace Demo.Shared
 {
 	public class Game1 : Game
 	{

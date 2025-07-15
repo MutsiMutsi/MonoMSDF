@@ -243,7 +243,7 @@ namespace MonoMSDF
 
 				//Set the params
 				msdifEffect.Parameters["SpriteTexture"].SetValue(atlasTexture);
-				msdifEffect.Parameters["AtlasSize"].SetValue(new Vector2(glyphAtlas.Atlas.Width, glyphAtlas.Atlas.Height));
+				//msdifEffect.Parameters["AtlasSize"].SetValue(new Vector2(glyphAtlas.Atlas.Width, glyphAtlas.Atlas.Height));
 
 				return true;
 			}
@@ -487,10 +487,10 @@ namespace MonoMSDF
 				float glyphRight = x + glyph.PlaneBounds.right;
 				float glyphTop = y + glyph.PlaneBounds.top;
 
-				TextBuffer.Vertices[vertexIndex] = new VertexFont(new Vector2(glyphLeft, -glyphBottom), glyph.TextureCoordinates[0], fillColorsCache[0], strokeColorsCache[0]);
-				TextBuffer.Vertices[vertexIndex + 1] = new VertexFont(new Vector2(glyphRight, -glyphBottom), glyph.TextureCoordinates[1], fillColorsCache[1], strokeColorsCache[1]);
-				TextBuffer.Vertices[vertexIndex + 2] = new VertexFont(new Vector2(glyphRight, -glyphTop), glyph.TextureCoordinates[2], fillColorsCache[2], strokeColorsCache[2]);
-				TextBuffer.Vertices[vertexIndex + 3] = new VertexFont(new Vector2(glyphLeft, -glyphTop), glyph.TextureCoordinates[3], fillColorsCache[3], strokeColorsCache[3]);
+				TextBuffer.Vertices[vertexIndex] = new VertexFont(new Vector2(glyphLeft, -glyphBottom), glyph.TextureCoordinates[0], fillColorsCache[0], strokeColorsCache[0], (uint)vertexIndex);
+				TextBuffer.Vertices[vertexIndex + 1] = new VertexFont(new Vector2(glyphRight, -glyphBottom), glyph.TextureCoordinates[1], fillColorsCache[1], strokeColorsCache[1], (uint)vertexIndex + 1);
+				TextBuffer.Vertices[vertexIndex + 2] = new VertexFont(new Vector2(glyphRight, -glyphTop), glyph.TextureCoordinates[2], fillColorsCache[2], strokeColorsCache[2], (uint)vertexIndex + 2);
+				TextBuffer.Vertices[vertexIndex + 3] = new VertexFont(new Vector2(glyphLeft, -glyphTop), glyph.TextureCoordinates[3], fillColorsCache[3], strokeColorsCache[3], (uint)vertexIndex + 3);
 
 				vertexIndex += 4;
 

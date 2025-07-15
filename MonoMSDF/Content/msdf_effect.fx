@@ -19,7 +19,6 @@ sampler2D SpriteTextureSampler = sampler_state
 };
 
 float4x4 WorldViewProjection;
-float2 AtlasSize;
 float ZoomLevel;
 
 // Vertex shader input structure
@@ -31,8 +30,11 @@ struct VertexShaderInput
     float4 FillColor : COLOR0;
     float4 StrokeColor : COLOR1;
     
-    //DX Only:
+#if OPENGL
+    float vertexID : TEXCOORD7;
+#else
     uint vertexID : SV_VertexID;
+#endif
     
     //Instanced data
     float4 WorldMatrixRow0 : TEXCOORD1;
@@ -60,7 +62,8 @@ VertexShaderOutput MainVS(VertexShaderInput input)
 {
     VertexShaderOutput output;
     
-    if (input.vertexID < input.VertexRange.x || input.vertexID >= input.VertexRange.y)
+#if OPENGL
+    if ((int) input.vertexID < input.VertexRange.x || (int) input.vertexID >= input.VertexRange.y)
     {
         output.FillColor = float4(0, 0, 0, 0);
         output.PixelRanges = 0.0;
@@ -69,6 +72,18 @@ VertexShaderOutput MainVS(VertexShaderInput input)
         output.TextureCoordinates = float2(0, 0);
         return output;
     }
+#else
+    if (input.vertexID < input.VertexRange.x ||input.vertexID >= input.VertexRange.y)
+    {
+        output.FillColor = float4(0, 0, 0, 0);
+        output.PixelRanges = 0.0;
+        output.Position = float4(-10000, -10000, -10000, -10000);
+        output.StrokeColor = float4(0, 0, 0, 0);
+        output.TextureCoordinates = float2(0, 0);
+        return output;
+    }
+#endif
+    
     
 	// Transform vertex position to screen space
     float4x4 WorldMatrix = float4x4(

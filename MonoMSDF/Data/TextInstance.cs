@@ -9,7 +9,7 @@ namespace MonoMSDF
 	{
 		public Matrix WorldTransform;   // 64 bytes
 		public Vector2 PixelRanges;     // 8 bytes  
-		public Vector2 VertexRange;
+		public Vector2 VertexRange;     // 8 bytes  
 
 		public TextInstance(Matrix world, float screenPxRange, float distanceRange, int vertexStartId, int vertexEndId)
 		{

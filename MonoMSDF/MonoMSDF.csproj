@@ -1,41 +1,49 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <PublishAot>true</PublishAot>
     <Nullable>disable</Nullable>
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Title>MonoMSDF</Title>
+    <Version>0.2.1</Version>
+    <Authors>Mutsi</Authors>
+    <PackageProjectUrl>https://github.com/MutsiMutsi/MonoMSDF</PackageProjectUrl>
+    <Description>A high performance multi signed distance field text renderer for MonoGame projects.</Description>
+    <RepositoryUrl>https://github.com/MutsiMutsi/MonoMSDF</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <IncludeSymbols>False</IncludeSymbols>
   </PropertyGroup>
 
   <ItemGroup>
     <Content Include="MonoMSDF.props" PackagePath="build/" />
+    <None Include="..\..\..\..\AppData\Local\Microsoft\Windows\INetCache\IE\8QWOEH3Z\README[1].md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
 
     <None Include="Content/msdf_effect.fx">
       <Pack>true</Pack>
       <PackageCopyToOutput>true</PackageCopyToOutput>
       <PackageFlatten>true</PackageFlatten>
       <PackagePath>build/Content/</PackagePath>
-      <CopyToOutputDirectory></CopyToOutputDirectory>
     </None>
-
     <None Include="Content/Content.mgcb">
       <Pack>true</Pack>
       <PackageCopyToOutput>true</PackageCopyToOutput>
       <PackageFlatten>true</PackageFlatten>
       <PackagePath>build/Content/</PackagePath>
-      <CopyToOutputDirectory></CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MonoGame.Framework.WindowsDX" Version="3.8.4" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\AtlasBuilder\AtlasBuilder.csproj" />
+    <PackageReference Include="MonoGame.Framework.Native" Version="3.8.*">
+        <PrivateAssets>All</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
 
 </Project>

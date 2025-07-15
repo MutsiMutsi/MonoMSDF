@@ -2,7 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using System;
 
-namespace MonoMSDF.Demo
+namespace Demo.Shared
 {
 	public class Camera2D
 	{
