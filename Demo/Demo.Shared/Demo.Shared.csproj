@@ -6,7 +6,9 @@
     <PackageReference Include="MonoGame.Framework.Native" Version="3.8.*">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="MonoMSDF" Version="0.2.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\MonoMSDF\MonoMSDF.csproj" />
   </ItemGroup>
 
 </Project>
