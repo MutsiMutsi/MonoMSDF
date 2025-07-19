@@ -1,5 +1,4 @@
 name: .NET
-
 on:
   push:
     branches: [ "main" ]
@@ -9,30 +8,46 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
-
+    
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
-
+    
+    # Clean NuGet cache to avoid corruption issues
+    - name: Clean NuGet cache
+      run: dotnet nuget locals all --clear
+    
+    # Install MGCB tool globally first (before local tools)
     - name: Install MGCB tool globally
       run: |
         dotnet tool install --global dotnet-mgcb --version 3.8.4
         echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
-
-    - name: Use isolated NuGet cache
+    
+    # Set up isolated NuGet packages directory
+    - name: Setup NuGet cache
       run: |
         mkdir -p ${{ github.workspace }}/.nuget/packages
         echo "NUGET_PACKAGES=${{ github.workspace }}/.nuget/packages" >> $GITHUB_ENV
-
+    
+    # Restore local tools first with proper error handling
+    - name: Restore local tools
+      run: |
+        if [ -f ".config/dotnet-tools.json" ]; then
+          echo "Restoring local tools..."
+          dotnet tool restore --disable-parallel
+        else
+          echo "No local tools manifest found, skipping tool restore"
+        fi
+    
+    # Restore project dependencies
     - name: Restore dependencies
-      run: dotnet restore --disable-parallel
-
+      run: dotnet restore --disable-parallel --no-cache
+    
     - name: Build
       run: dotnet build --no-restore --verbosity minimal
-
+    
     - name: Test
       run: dotnet test --no-build --verbosity normal
