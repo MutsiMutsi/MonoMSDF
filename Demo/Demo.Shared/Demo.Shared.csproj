@@ -8,7 +8,10 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\AtlasBuilder\AtlasBuilder.csproj" />
     <ProjectReference Include="..\..\MonoMSDF\MonoMSDF.csproj" />
   </ItemGroup>
+
+  <Import Project="../../MonoMSDF/MonoMSDF.props" />
 
 </Project>
