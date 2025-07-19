@@ -6,50 +6,8 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-linux:
-    runs-on: ubuntu-latest
-    name: Build (Linux - OpenGL)
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
-    
-    - name: Clean NuGet cache
-      run: dotnet nuget locals all --clear
-    
-    - name: Install MGCB tool globally
-      run: |
-        dotnet tool install --global dotnet-mgcb --version 3.8.4
-        echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
-    
-    - name: Setup NuGet cache
-      run: |
-        TEMP_NUGET_DIR="/tmp/nuget-packages-${{ github.run_id }}"
-        mkdir -p "$TEMP_NUGET_DIR"
-        echo "NUGET_PACKAGES=$TEMP_NUGET_DIR" >> $GITHUB_ENV
-    
-    - name: Restore local tools
-      run: |
-        if [ -f ".config/dotnet-tools.json" ]; then
-          dotnet tool restore --disable-parallel
-        fi
-    
-    - name: Build Core Library
-      run: |
-        dotnet build MonoMSDF/MonoMSDF.csproj --verbosity minimal \
-          -p:RestoreDotnetTools=false
-    
-    - name: Build OpenGL Demo
-      run: |
-        dotnet build Demo/Demo.GL/Demo.GL.csproj --verbosity minimal \
-          -p:RestoreDotnetTools=false
-
-  build-windows:
-    runs-on: windows-latest
-    name: Build (Windows - DirectX + OpenGL)
+  build:
+    runs-on: windows-latest  # Use Windows for full MonoGame support
     steps:
     - uses: actions/checkout@v4
     
@@ -73,17 +31,14 @@ jobs:
     
     - name: Restore dependencies
       run: |
-        dotnet restore --disable-parallel --no-cache \
-          -p:RestoreDotnetTools=false
+        dotnet restore --disable-parallel --no-cache --verbosity normal -p:RestoreDotnetTools=false -maxcpucount:1
     
-    - name: Build All Projects
+    - name: Build
       run: |
-        dotnet build --no-restore --verbosity minimal \
-          -p:RestoreDotnetTools=false
+        dotnet build --no-restore --verbosity minimal -p:RestoreDotnetTools=false -maxcpucount:1
     
     - name: Test
       run: |
-        # Run tests if they exist
         $testProjects = Get-ChildItem -Recurse -Filter "*.Tests.csproj"
         if ($testProjects.Count -gt 0) {
           dotnet test --no-build --verbosity normal
