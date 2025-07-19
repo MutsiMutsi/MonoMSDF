@@ -3,7 +3,7 @@
   <!-- Atlas Builder Task -->
   <UsingTask TaskName="AtlasBuilder.BuildAtlasTask" AssemblyFile="$(MSBuildThisFileDirectory)..\AtlasBuilder\bin\Debug\netstandard2.0\AtlasBuilder.dll" />
   
-  <Target Name="BuildAtlasTask" AfterTargets="CoreCompile">
+  <Target Name="BuildAtlasTask" AfterTargets="CopyFilesToOutputDirectory">
     <!-- Set default paths if not provided -->
     <PropertyGroup>
       <MonoGameContentFolder Condition="'$(MonoGameContentFolder)' == ''">$(ProjectDir)Content</MonoGameContentFolder>

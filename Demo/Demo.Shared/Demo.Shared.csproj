@@ -12,6 +12,4 @@
     <ProjectReference Include="..\..\MonoMSDF\MonoMSDF.csproj" />
   </ItemGroup>
 
-  <Import Project="../../MonoMSDF/MonoMSDF.props" />
-
 </Project>
