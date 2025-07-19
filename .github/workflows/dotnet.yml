@@ -8,7 +8,6 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -19,16 +18,21 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
-    - name: Use isolated NuGet package cache
+    - name: Install MGCB tool globally
+      run: |
+        dotnet tool install --global dotnet-mgcb --version 3.8.4
+        echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+    - name: Use isolated NuGet cache
       run: |
         mkdir -p ${{ github.workspace }}/.nuget/packages
         echo "NUGET_PACKAGES=${{ github.workspace }}/.nuget/packages" >> $GITHUB_ENV
 
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore --disable-parallel
 
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build --no-restore --verbosity minimal
 
     - name: Test
       run: dotnet test --no-build --verbosity normal
