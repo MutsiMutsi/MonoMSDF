@@ -1,5 +1,18 @@
 # MonoMSDF
 
+
+[![Build](https://github.com/MutsiMutsi/MonoMSDF/actions/workflows/dotnet.yml/badge.svg)](https://github.com/MutsiMutsi/MonoMSDF/actions/workflows/dotnet.yml)
+[![.NET](https://img.shields.io/badge/.NET-8.0-blue.svg?logo=dotnet)](https://dotnet.microsoft.com/)
+[![License](https://img.shields.io/github/license/MutsiMutsi/MonoMSDF.svg)](https://github.com/MutsiMutsi/MonoMSDF/blob/main/LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/MutsiMutsi/MonoMSDF.svg)](https://github.com/MutsiMutsi/MonoMSDF/commits/main)
+[![Stars](https://img.shields.io/github/stars/MutsiMutsi/MonoMSDF.svg?style=social&label=Star)](https://github.com/MutsiMutsi/MonoMSDF/stargazers)
+[![Forks](https://img.shields.io/github/forks/MutsiMutsi/MonoMSDF.svg?style=social&label=Fork)](https://github.com/MutsiMutsi/MonoMSDF/network/members)
+
+<!-- If you're publishing to NuGet, uncomment below and set correct package name -->
+<!--
+[![NuGet](https://img.shields.io/nuget/v/MonoMSDF.svg)](https://www.nuget.org/packages/MonoMSDF/)
+-->
+
 A multi signed distance field text renderer for MonoGame.
 
 For those that want sharper text, rich customization features, the best performance, rock solid kerning, zero heap allocations, thousands of dynamic and static lines of text.
