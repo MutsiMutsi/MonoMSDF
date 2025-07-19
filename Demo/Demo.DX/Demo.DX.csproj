@@ -28,8 +28,6 @@
     <ProjectReference Include="..\Demo.Shared\Demo.Shared.csproj" />
   </ItemGroup>
 
-  <Import Project="../../MonoMSDF/MonoMSDF.props" />
-
   <!-- Atlas Builder -->
   <PropertyGroup>
     <FontSize>48.0</FontSize>
