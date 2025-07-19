@@ -434,6 +434,7 @@ namespace MonoMSDF
 				{
 					x = position.X;
 					y -= glyphAtlas.Metrics.LineHeight;
+					continue;
 				}
 
 				var glyph = glyphs[c];
