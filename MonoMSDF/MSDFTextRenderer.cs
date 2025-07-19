@@ -9,6 +9,8 @@ namespace MonoMSDF
 {
 	public class MSDFTextRenderer : IDisposable
 	{
+		public static char StylePrefixChar = '|';
+
 		private readonly GraphicsDevice graphicsDevice;
 		private readonly Effect msdifEffect;
 
@@ -85,7 +87,7 @@ namespace MonoMSDF
 
 		private bool isWriteableChar(char c)
 		{
-			return (c != ' ' && c != '\n' && c != '|');
+			return (c != ' ' && c != '\n' && c != StylePrefixChar);
 		}
 
 		// Preprocessing method that does all parsing upfront
@@ -112,7 +114,7 @@ namespace MonoMSDF
 				}
 
 				// Handle style tags
-				if (c == '|')
+				if (c == StylePrefixChar)
 				{
 					if (i == text.Length - 1)
 					{
