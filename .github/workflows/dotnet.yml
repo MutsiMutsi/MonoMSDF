@@ -6,8 +6,9 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-latest
+    name: Build (Linux - OpenGL)
     steps:
     - uses: actions/checkout@v4
     
@@ -16,45 +17,76 @@ jobs:
       with:
         dotnet-version: 8.0.x
     
-    # Clean NuGet cache to avoid corruption issues
     - name: Clean NuGet cache
       run: dotnet nuget locals all --clear
     
-    # Install MGCB tool globally first
     - name: Install MGCB tool globally
       run: |
         dotnet tool install --global dotnet-mgcb --version 3.8.4
         echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
     
-    # Set up isolated NuGet packages directory with unique temp path
     - name: Setup NuGet cache
       run: |
         TEMP_NUGET_DIR="/tmp/nuget-packages-${{ github.run_id }}"
         mkdir -p "$TEMP_NUGET_DIR"
         echo "NUGET_PACKAGES=$TEMP_NUGET_DIR" >> $GITHUB_ENV
     
-    # Restore local tools once at solution level to avoid race conditions
-    - name: Restore local tools (solution level)
+    - name: Restore local tools
       run: |
         if [ -f ".config/dotnet-tools.json" ]; then
-          echo "Restoring local tools at solution level..."
           dotnet tool restore --disable-parallel
-        else
-          echo "No local tools manifest found, skipping tool restore"
         fi
     
-    # Restore project dependencies with MSBuild parallelism disabled and skip tool restore
+    - name: Build Core Library
+      run: |
+        dotnet build MonoMSDF/MonoMSDF.csproj --verbosity minimal \
+          -p:RestoreDotnetTools=false
+    
+    - name: Build OpenGL Demo
+      run: |
+        dotnet build Demo/Demo.GL/Demo.GL.csproj --verbosity minimal \
+          -p:RestoreDotnetTools=false
+
+  build-windows:
+    runs-on: windows-latest
+    name: Build (Windows - DirectX + OpenGL)
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+    
+    - name: Clean NuGet cache
+      run: dotnet nuget locals all --clear
+    
+    - name: Install MGCB tool globally
+      run: |
+        dotnet tool install --global dotnet-mgcb --version 3.8.4
+    
+    - name: Restore local tools
+      run: |
+        if (Test-Path ".config/dotnet-tools.json") {
+          dotnet tool restore --disable-parallel
+        }
+    
     - name: Restore dependencies
       run: |
-        dotnet restore --disable-parallel --no-cache --verbosity normal \
-          -p:RestoreDotnetTools=false \
-          -maxcpucount:1
+        dotnet restore --disable-parallel --no-cache \
+          -p:RestoreDotnetTools=false
     
-    - name: Build
+    - name: Build All Projects
       run: |
         dotnet build --no-restore --verbosity minimal \
-          -p:RestoreDotnetTools=false \
-          -maxcpucount:1
+          -p:RestoreDotnetTools=false
     
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: |
+        # Run tests if they exist
+        $testProjects = Get-ChildItem -Recurse -Filter "*.Tests.csproj"
+        if ($testProjects.Count -gt 0) {
+          dotnet test --no-build --verbosity normal
+        } else {
+          Write-Host "No test projects found, skipping tests"
+        }
