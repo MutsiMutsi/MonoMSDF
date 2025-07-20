@@ -202,9 +202,14 @@ namespace MonoMSDF
 			{
 				// Load and parse JSON
 				glyphAtlas = FontLoader.Load(jsonPath);
+
+				if (glyphAtlas.Atlas == null || glyphAtlas.Glyphs == null || glyphAtlas.Metrics == null)
+				{
+					throw new FormatException("JSON Format not compatible, did you generate the atlas with msdf-atlas-gen or the provided Atlas Builder?");
+				}
+
 				foreach (Glyph glyph in glyphAtlas.Glyphs)
 				{
-
 					//TODO: Is it worth putting these floats in a rectangle or 2x Vector2 instead of just keeping them as floats?
 					//x and y position will have to be added at runtime either way.
 					//float glyphLeft = x + glyph.PlaneBounds.left;
@@ -249,10 +254,9 @@ namespace MonoMSDF
 
 				return true;
 			}
-			catch (Exception ex)
+			catch
 			{
-				Console.WriteLine($"Failed to load atlas: {ex.Message}");
-				return false;
+				throw;
 			}
 		}
 
