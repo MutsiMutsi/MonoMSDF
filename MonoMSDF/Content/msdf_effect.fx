@@ -73,7 +73,7 @@ VertexShaderOutput MainVS(VertexShaderInput input)
         return output;
     }
 #else
-    if (input.vertexID < input.VertexRange.x ||input.vertexID >= input.VertexRange.y)
+    if (input.vertexID < input.VertexRange.x || input.vertexID >= input.VertexRange.y)
     {
         output.FillColor = float4(0, 0, 0, 0);
         output.PixelRanges = 0.0;
@@ -180,6 +180,99 @@ float4 StrokedPS(VertexShaderOutput input) : COLOR
     return float4(finalColor.rgb, finalColor.a * max(opacity, strokeOpacity));
 }
 
+
+float GetOpacityFromDistance(float signedDistance, float distanceRange, float2 Jdx, float2 Jdy)
+{
+    const float distanceLimit = sqrt(2.0f) / 2.0f;
+    const float thickness = 1.0f / distanceRange;
+    float2 gradientDistance = SafeNormalize(float2(ddx(signedDistance), ddy(signedDistance)));
+    float2 gradient = float2(gradientDistance.x * Jdx.x + gradientDistance.y * Jdy.x, gradientDistance.x * Jdx.y + gradientDistance.y * Jdy.y);
+    float scaledDistanceLimit = min(thickness * distanceLimit * length(gradient), 0.5f);
+
+    return smoothstep(-scaledDistanceLimit, scaledDistanceLimit, signedDistance);
+}
+
+// Small text optimized MSDF pixel shader
+float4 SmallTextPS(VertexShaderOutput input) : COLOR
+{
+    float2 pixelCoord = input.TextureCoordinates * float2(256, 256);
+    float2 Jdx = ddx(pixelCoord);
+    float2 Jdy = ddy(pixelCoord);
+    float3 sample = tex2D(SpriteTextureSampler, input.TextureCoordinates).rgb;
+    float signedDistance = median(sample) - 0.5f;
+    
+    float opacity = GetOpacityFromDistance(signedDistance, input.PixelRanges.y, Jdx, Jdy);
+    float4 color;
+
+    color.a = pow(abs(input.FillColor.a * opacity), 1.0f / 2.2f); // Correct for gamma, 2.2 is a valid gamma for most LCD monitors.
+    color.rgb = input.FillColor.rgb;
+
+    return color;
+}
+
+// Small text with stroke support
+float4 StrokedSmallTextPS(VertexShaderOutput input) : COLOR
+{
+    float2 pixelCoord = input.TextureCoordinates;
+    float2 Jdx = ddx(pixelCoord);
+    float2 Jdy = ddy(pixelCoord);
+    float medianSample = median(tex2D(SpriteTextureSampler, input.TextureCoordinates).rgb);
+    float signedDistance = medianSample - 0.5f;
+
+    const float strokeThickness = 0.1875f;
+    float strokeDistance = -(abs(medianSample - 0.25f - strokeThickness) - strokeThickness);
+
+    float opacity = GetOpacityFromDistance(signedDistance, input.PixelRanges.y, Jdx, Jdy);
+    float strokeOpacity = GetOpacityFromDistance(strokeDistance, input.PixelRanges.y, Jdx, Jdy);
+    
+    float4 strokeColor = input.StrokeColor;
+    return lerp(strokeColor, input.FillColor, opacity) * max(opacity, strokeOpacity);
+}
+
+
+
+float4 SubPixelPS(VertexShaderOutput input) : COLOR
+{
+    float2 dx = ddx(input.TextureCoordinates);
+    float pixelWidthInUV = length(dx);
+    float subpixelOffsetX = pixelWidthInUV / 3.0;
+    
+    float2 uv = input.TextureCoordinates;
+
+    // Sample shifted MSDF values for RGB subpixels
+    float3 msdR = tex2D(SpriteTextureSampler, uv - float2(subpixelOffsetX, 0)).rgb;
+    float3 msdG = tex2D(SpriteTextureSampler, uv).rgb;
+    float3 msdB = tex2D(SpriteTextureSampler, uv + float2(subpixelOffsetX, 0)).rgb;
+
+    // Compute median distances
+    float sdR = median(msdR.r, msdR.g, msdR.b);
+    float sdG = median(msdG.r, msdG.g, msdG.b);
+    float sdB = median(msdB.r, msdB.g, msdB.b);
+
+    // Use screen-space antialiasing range
+    float pxRange = input.PixelRanges.x;
+
+    // Convert distances to opacities
+    float opacityR = clamp((sdR - 0.5) * pxRange + 0.5, 0.0, 1.0);
+    float opacityG = clamp((sdG - 0.5) * pxRange + 0.5, 0.0, 1.0);
+    float opacityB = clamp((sdB - 0.5) * pxRange + 0.5, 0.0, 1.0);
+
+    // Gamma correction for better perceptual subpixel rendering
+    float gamma = 1.0 / 2.2;
+    opacityR = pow(opacityR, gamma);
+    opacityG = pow(opacityG, gamma);
+    opacityB = pow(opacityB, gamma);
+
+    // Compose subpixel-colored output
+    float3 subpixelOpacity = float3(opacityR, opacityG, opacityB);
+    float3 rgb = input.FillColor.rgb * subpixelOpacity;
+
+    // Average alpha for consistent coverage
+    float alpha = input.FillColor.a * (opacityR + opacityG + opacityB) / 3.0;
+
+    return float4(rgb, alpha);
+}
+
 // Main technique for standard MSDF text rendering
 technique MSDFTextRendering
 {
@@ -201,5 +294,42 @@ technique MSDFTextWithStroke
             MainVS();
         PixelShader = compile PS_SHADERMODEL
             StrokedPS();
+    }
+}
+
+
+// Technique optimized for small text rendering
+technique MSDFSmallText
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL
+            MainVS();
+        PixelShader = compile PS_SHADERMODEL
+            SmallTextPS();
+    }
+}
+
+// Technique for small text with stroke
+technique MSDFSmallTextWithStroke
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL
+            MainVS();
+        PixelShader = compile PS_SHADERMODEL
+            StrokedSmallTextPS();
+    }
+}
+
+// Technique for text with stroke/outline
+technique MSDFSubPixel
+{
+    pass P0
+    {
+        VertexShader = compile VS_SHADERMODEL
+            MainVS();
+        PixelShader = compile PS_SHADERMODEL
+            SubPixelPS();
     }
 }

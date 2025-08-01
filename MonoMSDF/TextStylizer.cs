@@ -43,7 +43,7 @@ namespace MonoMSDF
 
 		public void AddTag(TagDefinition tag)
 		{
-			if (string.IsNullOrWhiteSpace(tag.StartTag) || string.IsNullOrWhiteSpace(tag.EndTag))
+			if (string.IsNullOrEmpty(tag.StartTag) || string.IsNullOrWhiteSpace(tag.EndTag))
 			{
 				throw new ArgumentNullException("Both start and end tag have to have valid characters");
 			}

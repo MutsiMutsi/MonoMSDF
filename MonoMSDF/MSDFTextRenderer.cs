@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using System;
+using System.Diagnostics;
 using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 
@@ -10,6 +11,9 @@ namespace MonoMSDF
 	public class MSDFTextRenderer : IDisposable
 	{
 		public static char StylePrefixChar = '|';
+		public static bool EnableKerning = true;
+
+		public GlyphAtlas GetAtlas => glyphAtlas;
 
 		private readonly GraphicsDevice graphicsDevice;
 		private readonly Effect msdifEffect;
@@ -80,7 +84,9 @@ namespace MonoMSDF
 			drawTechniques[FontDrawType.StandardText] = msdifEffect.Techniques["MSDFTextRendering"];
 			drawTechniques[FontDrawType.StandardTextWithStroke] = msdifEffect.Techniques["MSDFTextWithStroke"];
 			drawTechniques[FontDrawType.TinyText] = msdifEffect.Techniques["MSDFSmallText"];
-			drawTechniques[FontDrawType.TinyTextWithStroke] = msdifEffect.Techniques["MSDFTextRendering"];
+			drawTechniques[FontDrawType.TinyTextWithStroke] = msdifEffect.Techniques["MSDFSmallTextWithStroke"];
+
+			drawTechniques[FontDrawType.SubPixel] = msdifEffect.Techniques["MSDFSubPixel"];
 
 			matrixParameter = msdifEffect.Parameters["WorldViewProjection"];
 		}
@@ -203,7 +209,7 @@ namespace MonoMSDF
 				// Load and parse JSON
 				glyphAtlas = FontLoader.Load(jsonPath);
 
-				if (glyphAtlas.Atlas == null || glyphAtlas.Glyphs == null || glyphAtlas.Metrics == null)
+				if (glyphAtlas.Atlas.Width == 0 || glyphAtlas.Glyphs == null || glyphAtlas.Metrics.LineHeight == 0)
 				{
 					throw new FormatException("JSON Format not compatible, did you generate the atlas with msdf-atlas-gen or the provided Atlas Builder?");
 				}
@@ -228,7 +234,6 @@ namespace MonoMSDF
 						texTop = 1.0f - texTop;
 					}
 
-					glyph.TextureCoordinates = new Vector2[4];
 					glyph.TextureCoordinates[0] = new Vector2(texLeft, texBottom);
 					glyph.TextureCoordinates[1] = new Vector2(texRight, texBottom);
 					glyph.TextureCoordinates[2] = new Vector2(texRight, texTop);
@@ -237,13 +242,15 @@ namespace MonoMSDF
 					glyphs[glyph.Unicode] = glyph;
 				}
 
-				foreach (Kerning kernEntry in glyphAtlas.Kerning)
+
+				AddKernings(glyphAtlas.Kerning);
+				/*foreach (Kerning kernEntry in glyphAtlas.Kerning)
 				{
 					char left = (char)kernEntry.Unicode1;
 					char right = (char)kernEntry.Unicode2;
 					float advance = (float)kernEntry.Advance;
 					kerningPairs[(left, right)] = advance;
-				}
+				}*/
 
 				// Load PNG texture using MonoGame's content pipeline or Texture2D.FromFile
 				atlasTexture = FontLoader.LoadTexture(graphicsDevice, pngPath);
@@ -258,6 +265,42 @@ namespace MonoMSDF
 			{
 				throw;
 			}
+		}
+
+		public void AddKernings(ReadOnlySpan<Kerning> newKernings)
+		{
+			foreach (Kerning kernEntry in newKernings)
+			{
+				char left = (char)kernEntry.Unicode1;
+				char right = (char)kernEntry.Unicode2;
+				float advance = (float)kernEntry.Advance;
+				kerningPairs[(left, right)] = advance;
+			}
+		}
+
+		public void AddKernings(List<Kerning> newKernings)
+		{
+			foreach (Kerning kernEntry in newKernings)
+			{
+				char left = (char)kernEntry.Unicode1;
+				char right = (char)kernEntry.Unicode2;
+				float advance = (float)kernEntry.Advance;
+				kerningPairs[(left, right)] = advance;
+			}
+		}
+
+		public void LoadAtlas(GlyphAtlas atlas, Texture2D texture)
+		{
+			this.glyphAtlas = atlas;
+			this.atlasTexture = texture;
+			msdifEffect.Parameters["SpriteTexture"].SetValue(atlasTexture);
+
+			for (int i = 0; i < atlas.Glyphs.Count; i++)
+			{
+				glyphs[atlas.Glyphs[i].Unicode] = atlas.Glyphs[i];
+			}
+
+			AddKernings(atlas.Kerning);
 		}
 
 		public TextGeometryHandle GenerateGeometry(ReadOnlySpan<char> text, Color fillColor, Color strokeColor)
@@ -501,7 +544,7 @@ namespace MonoMSDF
 
 				vertexIndex += 4;
 
-				if (i < text.Length - 2 && kerningPairs.TryGetValue((c, text[i + 1].Character), out float kern))
+				if (EnableKerning && i < text.Length - 2 && kerningPairs.TryGetValue((c, text[i + 1].Character), out float kern))
 				{
 					x += kern;
 				}
