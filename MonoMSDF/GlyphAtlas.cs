@@ -3,23 +3,42 @@ using System.Text.Json.Serialization;
 
 namespace MonoMSDF;
 
-public struct Bounds
+public readonly struct Bounds
 {
-	public float left { get; set; }
-	public float bottom { get; set; }
-	public float right { get; set; }
-	public float top { get; set; }
+	public readonly float left;
+	public readonly float bottom;
+	public readonly float right;
+	public readonly float top;
+
+	public Bounds(float left, float bottom, float right, float top)
+	{
+		this.left = left;
+		this.bottom = bottom;
+		this.right = right;
+		this.top = top;
+	}
 }
 
-public class Atlas
+public readonly struct Atlas
 {
-	public string Type { get; set; }
-	public int DistanceRange { get; set; }
-	public int DistanceRangeMiddle { get; set; }
-	public int Size { get; set; }
-	public int Width { get; set; }
-	public int Height { get; set; }
-	public string YOrigin { get; set; }
+	public Atlas(string type, int distanceRange, int distanceRangeMiddle, int size, int width, int height, string yOrigin)
+	{
+		Type = type;
+		DistanceRange = distanceRange;
+		DistanceRangeMiddle = distanceRangeMiddle;
+		Size = size;
+		Width = width;
+		Height = height;
+		YOrigin = yOrigin;
+	}
+
+	public readonly string Type;
+	public readonly int DistanceRange;
+	public readonly int DistanceRangeMiddle;
+	public readonly int Size;
+	public readonly int Width;
+	public readonly int Height;
+	public readonly string YOrigin;
 }
 
 public class Glyph
@@ -29,24 +48,41 @@ public class Glyph
 	public Bounds PlaneBounds { get; set; }
 	public Bounds AtlasBounds { get; set; }
 
-	public Vector2[] TextureCoordinates { get; set; }
+	public Vector2[] TextureCoordinates = new Vector2[4];
 }
 
-public class Kerning
+public readonly struct Kerning
 {
-	public int Unicode1 { get; set; }
-	public int Unicode2 { get; set; }
-	public float Advance { get; set; }
+	public Kerning(int unicode1, int unicode2, float advance)
+	{
+		Unicode1 = unicode1;
+		Unicode2 = unicode2;
+		Advance = advance;
+	}
+
+	public readonly int Unicode1;
+	public readonly int Unicode2;
+	public readonly float Advance;
 }
 
-public class Metrics
+public readonly struct Metrics
 {
-	public int EmSize { get; set; }
-	public float LineHeight { get; set; }
-	public float Ascender { get; set; }
-	public float Descender { get; set; }
-	public float UnderlineY { get; set; }
-	public float UnderlineThickness { get; set; }
+	public Metrics(int emSize, float lineHeight, float ascender, float descender, float underlineY, float underlineThickness)
+	{
+		EmSize = emSize;
+		LineHeight = lineHeight;
+		Ascender = ascender;
+		Descender = descender;
+		UnderlineY = underlineY;
+		UnderlineThickness = underlineThickness;
+	}
+
+	public readonly int EmSize;
+	public readonly float LineHeight;
+	public readonly float Ascender;
+	public readonly float Descender;
+	public readonly float UnderlineY;
+	public readonly float UnderlineThickness;
 }
 
 public class GlyphAtlas

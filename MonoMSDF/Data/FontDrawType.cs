@@ -4,6 +4,7 @@
 	{
 		StandardText,
 		StandardTextWithStroke,
+		SubPixel,
 		TinyText,
 		TinyTextWithStroke,
 	}

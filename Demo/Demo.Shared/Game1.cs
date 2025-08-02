@@ -185,7 +185,7 @@ namespace Demo.Shared
 			_textRenderer.AddTextInstance(new Vector2(8, 256f + 48f), 24f, textHandles[3].BufferRange);
 
 			//Immediate drawing, this is less efficient, but sure is a lot more convenient.
-			_textRenderer.OneShotText("The above text geometry is static, hold space to update the geometry.", new Vector2(8, 512), 32f, Color.MonoGameOrange, Color.Black);
+			_textRenderer.OneShotText("The above text geometry is |<static>, hold space to update the geometry.", new Vector2(8, 512), 32f, Color.MonoGameOrange, Color.Black);
 			_textRenderer.OneShotText("Hold enter to zoom in and out", new Vector2(8, 512 + 40f), 32f, Color.CornflowerBlue, Color.Black);
 
 			//Tell the renderer to draw all the instances of text we added above.
