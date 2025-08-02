@@ -216,17 +216,10 @@ namespace MonoMSDF
 
 				foreach (Glyph glyph in glyphAtlas.Glyphs)
 				{
-					//TODO: Is it worth putting these floats in a rectangle or 2x Vector2 instead of just keeping them as floats?
-					//x and y position will have to be added at runtime either way.
-					//float glyphLeft = x + glyph.PlaneBounds.left;
-					//float glyphBottom = y + glyph.PlaneBounds.bottom;
-					//float glyphRight = x + glyph.PlaneBounds.right;
-					//float glyphTop = y + glyph.PlaneBounds.top;
-
-					float texLeft = glyph.AtlasBounds.left / glyphAtlas.Atlas.Width;
-					float texBottom = glyph.AtlasBounds.bottom / glyphAtlas.Atlas.Height;
-					float texRight = glyph.AtlasBounds.right / glyphAtlas.Atlas.Width;
-					float texTop = glyph.AtlasBounds.top / glyphAtlas.Atlas.Height;
+					float texLeft = glyph.AtlasBounds.Left / glyphAtlas.Atlas.Width;
+					float texBottom = glyph.AtlasBounds.Bottom / glyphAtlas.Atlas.Height;
+					float texRight = glyph.AtlasBounds.Right / glyphAtlas.Atlas.Width;
+					float texTop = glyph.AtlasBounds.Top / glyphAtlas.Atlas.Height;
 
 					if (glyphAtlas.Atlas.YOrigin == "bottom")
 					{
@@ -234,12 +227,18 @@ namespace MonoMSDF
 						texTop = 1.0f - texTop;
 					}
 
-					glyph.TextureCoordinates[0] = new Vector2(texLeft, texBottom);
-					glyph.TextureCoordinates[1] = new Vector2(texRight, texBottom);
-					glyph.TextureCoordinates[2] = new Vector2(texRight, texTop);
-					glyph.TextureCoordinates[3] = new Vector2(texLeft, texTop);
+					//Precompute the texturecoordinates
+					var updatedGlyph = glyph with
+					{
+						TextureCoordinates = [
+							new Vector2(texLeft, texBottom),
+							new Vector2(texRight, texBottom),
+							new Vector2(texRight, texTop),
+							new Vector2(texLeft, texTop)
+						]
+					};
 
-					glyphs[glyph.Unicode] = glyph;
+					glyphs[glyph.Unicode] = updatedGlyph;
 				}
 
 
@@ -487,7 +486,7 @@ namespace MonoMSDF
 				}
 
 				var glyph = glyphs[c];
-				if (glyph.PlaneBounds.right == 0)
+				if (glyph.PlaneBounds.Right == 0)
 				{
 					x += glyph.Advance;
 					continue;
@@ -532,10 +531,10 @@ namespace MonoMSDF
 					}
 				}
 
-				float glyphLeft = x + glyph.PlaneBounds.left;
-				float glyphBottom = y + glyph.PlaneBounds.bottom;
-				float glyphRight = x + glyph.PlaneBounds.right;
-				float glyphTop = y + glyph.PlaneBounds.top;
+				float glyphLeft = x + glyph.PlaneBounds.Left;
+				float glyphBottom = y + glyph.PlaneBounds.Bottom;
+				float glyphRight = x + glyph.PlaneBounds.Right;
+				float glyphTop = y + glyph.PlaneBounds.Top;
 
 				TextBuffer.Vertices[vertexIndex] = new VertexFont(new Vector2(glyphLeft, -glyphBottom), glyph.TextureCoordinates[0], fillColorsCache[0], strokeColorsCache[0], (uint)vertexIndex);
 				TextBuffer.Vertices[vertexIndex + 1] = new VertexFont(new Vector2(glyphRight, -glyphBottom), glyph.TextureCoordinates[1], fillColorsCache[1], strokeColorsCache[1], (uint)vertexIndex + 1);
@@ -610,11 +609,11 @@ namespace MonoMSDF
 				}
 
 				// Track the actual bounds this character contributes
-				if (glyph.PlaneBounds.right > 0) // Only for visible glyphs
+				if (glyph.PlaneBounds.Right > 0) // Only for visible glyphs
 				{
-					float glyphRight = x + glyph.PlaneBounds.right;
-					float glyphTop = y + glyph.PlaneBounds.top;
-					float glyphBottom = y + glyph.PlaneBounds.bottom;
+					float glyphRight = x + glyph.PlaneBounds.Right;
+					float glyphTop = y + glyph.PlaneBounds.Top;
+					float glyphBottom = y + glyph.PlaneBounds.Bottom;
 
 					maxX = Math.Max(maxX, glyphRight);
 					maxY = Math.Max(maxY, glyphTop);
@@ -689,12 +688,12 @@ namespace MonoMSDF
 				}
 
 				// Only consider glyphs that actually render something
-				if (glyph.PlaneBounds.right > 0)
+				if (glyph.PlaneBounds.Right > 0)
 				{
-					float glyphLeft = x + glyph.PlaneBounds.left;
-					float glyphBottom = y + glyph.PlaneBounds.bottom;
-					float glyphRight = x + glyph.PlaneBounds.right;
-					float glyphTop = y + glyph.PlaneBounds.top;
+					float glyphLeft = x + glyph.PlaneBounds.Left;
+					float glyphBottom = y + glyph.PlaneBounds.Bottom;
+					float glyphRight = x + glyph.PlaneBounds.Right;
+					float glyphTop = y + glyph.PlaneBounds.Top;
 
 					minX = Math.Min(minX, glyphLeft);
 					maxX = Math.Max(maxX, glyphRight);

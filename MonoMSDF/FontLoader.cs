@@ -9,10 +9,6 @@ namespace MonoMSDF
 		{
 			string json = File.ReadAllText(path);
 			var result = JsonSerializer.Deserialize(json, SerializationModeOptionsContext.Default.GlyphAtlas);
-			/*if (result == null)
-			{
-				throw new Exception("Failed to deserialize json text");
-			}*/
 			return result;
 		}
 		public static Texture2D LoadTexture(GraphicsDevice graphicsDevice, string path)
