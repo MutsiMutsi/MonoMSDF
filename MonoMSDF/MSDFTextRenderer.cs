@@ -513,6 +513,174 @@ namespace MonoMSDF
 			return numChars;
 		}
 
+		public Vector2 MeasureTextLayout(ReadOnlySpan<char> text)
+		{
+			Span<DrawGlyph> tempBuffer = stackalloc DrawGlyph[text.Length];
+			var processedText = preprocessText(text, ref tempBuffer);
+
+			Vector2 position = Vector2.Zero;
+			float x = position.X;
+			float y = position.Y - glyphAtlas.Metrics.Ascender;
+
+			float maxX = x;
+			float minY = y;
+			float maxY = y;
+
+			var tempActiveStyles = new List<(GlyphStyle style, int length)>();
+
+			for (int i = 0; i < text.Length; i++)
+			{
+				DrawGlyph g = tempBuffer[i];
+				char c = g.Character;
+
+				if (c == '\n')
+				{
+					x = position.X;
+					y -= glyphAtlas.Metrics.LineHeight;
+					minY = Math.Min(minY, y);
+					continue;
+				}
+
+				if (!glyphs.TryGetValue(c, out var glyph))
+					continue;
+
+				// Handle styling (similar to your geometry generation)
+				if (g.StyleLength > 0)
+				{
+					var newStyle = Stylizer.Styles[g.StyleIndex];
+					tempActiveStyles.Add((newStyle, g.StyleLength));
+				}
+
+				float spacing = 0.0f;
+				for (int j = 0; j < tempActiveStyles.Count; j++)
+				{
+					if (tempActiveStyles[j].length <= 0)
+					{
+						tempActiveStyles.RemoveAt(j);
+						j--;
+						continue;
+					}
+					var style = tempActiveStyles[j];
+					style.length--;
+					tempActiveStyles[j] = style;
+					spacing += style.style.Spacing;
+				}
+
+				// Track the actual bounds this character contributes
+				if (glyph.PlaneBounds.right > 0) // Only for visible glyphs
+				{
+					float glyphRight = x + glyph.PlaneBounds.right;
+					float glyphTop = y + glyph.PlaneBounds.top;
+					float glyphBottom = y + glyph.PlaneBounds.bottom;
+
+					maxX = Math.Max(maxX, glyphRight);
+					maxY = Math.Max(maxY, glyphTop);
+					minY = Math.Min(minY, glyphBottom);
+				}
+
+				// Apply kerning
+				if (i < text.Length - 1 && kerningPairs.TryGetValue((c, tempBuffer[i + 1].Character), out float kern))
+				{
+					x += kern;
+				}
+
+				x += glyph.Advance + spacing;
+				maxX = Math.Max(maxX, x); // Track advance position too
+			}
+
+			return new Vector2(maxX - position.X, maxY - minY);
+		}
+
+		public (Vector2 size, Vector2 offset) MeasureTextPrecise(ReadOnlySpan<char> text)
+		{
+			Span<DrawGlyph> tempBuffer = stackalloc DrawGlyph[text.Length];
+			var processedText = preprocessText(text, ref tempBuffer);
+
+			Vector2 position = Vector2.Zero;
+			float x = position.X;
+			float y = position.Y - glyphAtlas.Metrics.Ascender;
+
+			float minX = float.MaxValue;
+			float maxX = float.MinValue;
+			float minY = float.MaxValue;
+			float maxY = float.MinValue;
+
+			bool hasVisibleContent = false;
+			var tempActiveStyles = new List<(GlyphStyle style, int length)>();
+
+			for (int i = 0; i < text.Length; i++)
+			{
+				DrawGlyph g = tempBuffer[i];
+				char c = g.Character;
+
+				if (c == '\n')
+				{
+					x = position.X;
+					y -= glyphAtlas.Metrics.LineHeight;
+					continue;
+				}
+
+				if (!glyphs.TryGetValue(c, out var glyph))
+					continue;
+
+				// Handle styling
+				if (g.StyleLength > 0)
+				{
+					var newStyle = Stylizer.Styles[g.StyleIndex];
+					tempActiveStyles.Add((newStyle, g.StyleLength));
+				}
+
+				float spacing = 0.0f;
+				for (int j = 0; j < tempActiveStyles.Count; j++)
+				{
+					if (tempActiveStyles[j].length <= 0)
+					{
+						tempActiveStyles.RemoveAt(j);
+						j--;
+						continue;
+					}
+					var style = tempActiveStyles[j];
+					style.length--;
+					tempActiveStyles[j] = style;
+					spacing += style.style.Spacing;
+				}
+
+				// Only consider glyphs that actually render something
+				if (glyph.PlaneBounds.right > 0)
+				{
+					float glyphLeft = x + glyph.PlaneBounds.left;
+					float glyphBottom = y + glyph.PlaneBounds.bottom;
+					float glyphRight = x + glyph.PlaneBounds.right;
+					float glyphTop = y + glyph.PlaneBounds.top;
+
+					minX = Math.Min(minX, glyphLeft);
+					maxX = Math.Max(maxX, glyphRight);
+					minY = Math.Min(minY, glyphBottom);
+					maxY = Math.Max(maxY, glyphTop);
+					hasVisibleContent = true;
+				}
+
+				// Apply kerning
+				if (i < text.Length - 1 && kerningPairs.TryGetValue((c, tempBuffer[i + 1].Character), out float kern))
+				{
+					x += kern;
+				}
+
+				x += glyph.Advance + spacing;
+			}
+
+			if (!hasVisibleContent)
+			{
+				return (Vector2.Zero, Vector2.Zero);
+			}
+
+			var size = new Vector2(maxX - minX, maxY - minY);
+			var offset = new Vector2(minX - position.X, minY - (position.Y - glyphAtlas.Metrics.Ascender));
+
+			return (size, offset);
+		}
+
+
 		public void Dispose()
 		{
 			atlasTexture?.Dispose();

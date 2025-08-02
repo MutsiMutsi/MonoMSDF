@@ -126,7 +126,7 @@ namespace Demo.Shared
 			textHandles.Add(_textRenderer.GenerateGeometry("|EXCALIBUR", Color.White, Color.Transparent));
 			textHandles.Add(_textRenderer.GenerateGeometry("Wait this Excalibur is |123fake321, |it doesn't quite shine like the others.!", Color.White, Color.Transparent));
 
-			debugDraw = new BufferDebugDraw(_textRenderer, _spriteBatch, GraphicsDevice);
+			debugDraw = new BufferDebugDraw(_textRenderer, GraphicsDevice);
 		}
 
 		public static string GenerateRandomString(int length)
@@ -170,7 +170,6 @@ namespace Demo.Shared
 
 
 
-
 			base.Update(gameTime);
 		}
 
@@ -193,7 +192,7 @@ namespace Demo.Shared
 			_textRenderer.RenderInstances(camera.TransformMatrix, Matrix.CreateOrthographicOffCenter(0, 1920, 1080, 0, -1f, 1f), FontDrawType.StandardTextWithStroke);
 
 			_spriteBatch.Begin();
-			debugDraw.DrawVertexBuffer(16, 16, 16);
+			debugDraw.DrawVertexBuffer(_spriteBatch, 16, 16, 16);
 			_spriteBatch.End();
 
 			base.Draw(gameTime);

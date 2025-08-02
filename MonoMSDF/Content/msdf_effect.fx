@@ -166,7 +166,8 @@ float4 StrokedPS(VertexShaderOutput input) : COLOR
     // Use your existing ScreenPxRange calculation
     signedDistance *= input.PixelRanges.x;
 
-    const float strokeThickness = 0.1875;
+    const float strokeThickness = 48.0 / ddx(input.TextureCoordinates.x);
+    
     // Calculate stroke distance - positive values result in outline along the edge
     float strokeDistance = -(abs(medianSample - 0.25 - strokeThickness) - strokeThickness);
     strokeDistance *= input.PixelRanges.x;
