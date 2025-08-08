@@ -1,9 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
-using System;
-using System.Diagnostics;
-using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 
 namespace MonoMSDF
@@ -38,6 +35,7 @@ namespace MonoMSDF
 
 		public TextStylizer Stylizer = new TextStylizer();
 		private List<(GlyphStyle style, int length)> activeStyles = [];
+		private List<(GlyphStyle style, int length)> activeMeasurementStyles = [];
 
 		[StructLayout(LayoutKind.Sequential)]
 		public struct DrawGlyph
@@ -78,7 +76,7 @@ namespace MonoMSDF
 			{
 				Filter = TextureFilter.Linear,
 				AddressU = TextureAddressMode.Clamp,
-				AddressV = TextureAddressMode.Clamp
+				AddressV = TextureAddressMode.Clamp,
 			};
 
 			drawTechniques[FontDrawType.StandardText] = msdifEffect.Techniques["MSDFTextRendering"];
@@ -228,14 +226,9 @@ namespace MonoMSDF
 					}
 
 					//Precompute the texturecoordinates
-					var updatedGlyph = glyph with
+					Glyph updatedGlyph = glyph with
 					{
-						TextureCoordinates = [
-							new Vector2(texLeft, texBottom),
-							new Vector2(texRight, texBottom),
-							new Vector2(texRight, texTop),
-							new Vector2(texLeft, texTop)
-						]
+						TextureCoordinates = new QuadUV(new Vector2(texLeft, texBottom), new Vector2(texRight, texBottom), new Vector2(texRight, texTop), new Vector2(texLeft, texTop))
 					};
 
 					glyphs[glyph.Unicode] = updatedGlyph;
@@ -394,6 +387,10 @@ namespace MonoMSDF
 			// Assuming reasonable max text length, adjust as needed
 			Span<DrawGlyph> tempBuffer = stackalloc DrawGlyph[text.Length];
 			var processedText = preprocessText(text, ref tempBuffer);
+
+			if (processedText.RenderableCharCount == 0)
+				return;
+
 			var bufferRange = TextBuffer.Allocate(processedText.RenderableCharCount * 4);
 
 			GenerateTextGeometry(
@@ -536,10 +533,10 @@ namespace MonoMSDF
 				float glyphRight = x + glyph.PlaneBounds.Right;
 				float glyphTop = y + glyph.PlaneBounds.Top;
 
-				TextBuffer.Vertices[vertexIndex] = new VertexFont(new Vector2(glyphLeft, -glyphBottom), glyph.TextureCoordinates[0], fillColorsCache[0], strokeColorsCache[0], (uint)vertexIndex);
-				TextBuffer.Vertices[vertexIndex + 1] = new VertexFont(new Vector2(glyphRight, -glyphBottom), glyph.TextureCoordinates[1], fillColorsCache[1], strokeColorsCache[1], (uint)vertexIndex + 1);
-				TextBuffer.Vertices[vertexIndex + 2] = new VertexFont(new Vector2(glyphRight, -glyphTop), glyph.TextureCoordinates[2], fillColorsCache[2], strokeColorsCache[2], (uint)vertexIndex + 2);
-				TextBuffer.Vertices[vertexIndex + 3] = new VertexFont(new Vector2(glyphLeft, -glyphTop), glyph.TextureCoordinates[3], fillColorsCache[3], strokeColorsCache[3], (uint)vertexIndex + 3);
+				TextBuffer.Vertices[vertexIndex] = new VertexFont(new Vector2(glyphLeft, -glyphBottom), glyph.TextureCoordinates.TopLeft, fillColorsCache[0], strokeColorsCache[0], (uint)vertexIndex);
+				TextBuffer.Vertices[vertexIndex + 1] = new VertexFont(new Vector2(glyphRight, -glyphBottom), glyph.TextureCoordinates.TopRight, fillColorsCache[1], strokeColorsCache[1], (uint)vertexIndex + 1);
+				TextBuffer.Vertices[vertexIndex + 2] = new VertexFont(new Vector2(glyphRight, -glyphTop), glyph.TextureCoordinates.BottomRight, fillColorsCache[2], strokeColorsCache[2], (uint)vertexIndex + 2);
+				TextBuffer.Vertices[vertexIndex + 3] = new VertexFont(new Vector2(glyphLeft, -glyphTop), glyph.TextureCoordinates.BottomLeft, fillColorsCache[3], strokeColorsCache[3], (uint)vertexIndex + 3);
 
 				vertexIndex += 4;
 
@@ -557,6 +554,8 @@ namespace MonoMSDF
 
 		public Vector2 MeasureTextLayout(ReadOnlySpan<char> text)
 		{
+			activeMeasurementStyles.Clear();
+
 			Span<DrawGlyph> tempBuffer = stackalloc DrawGlyph[text.Length];
 			var processedText = preprocessText(text, ref tempBuffer);
 
@@ -567,8 +566,6 @@ namespace MonoMSDF
 			float maxX = x;
 			float minY = y;
 			float maxY = y;
-
-			var tempActiveStyles = new List<(GlyphStyle style, int length)>();
 
 			for (int i = 0; i < text.Length; i++)
 			{
@@ -590,21 +587,21 @@ namespace MonoMSDF
 				if (g.StyleLength > 0)
 				{
 					var newStyle = Stylizer.Styles[g.StyleIndex];
-					tempActiveStyles.Add((newStyle, g.StyleLength));
+					activeMeasurementStyles.Add((newStyle, g.StyleLength));
 				}
 
 				float spacing = 0.0f;
-				for (int j = 0; j < tempActiveStyles.Count; j++)
+				for (int j = 0; j < activeMeasurementStyles.Count; j++)
 				{
-					if (tempActiveStyles[j].length <= 0)
+					if (activeMeasurementStyles[j].length <= 0)
 					{
-						tempActiveStyles.RemoveAt(j);
+						activeMeasurementStyles.RemoveAt(j);
 						j--;
 						continue;
 					}
-					var style = tempActiveStyles[j];
+					var style = activeMeasurementStyles[j];
 					style.length--;
-					tempActiveStyles[j] = style;
+					activeMeasurementStyles[j] = style;
 					spacing += style.style.Spacing;
 				}
 
@@ -620,108 +617,108 @@ namespace MonoMSDF
 					minY = Math.Min(minY, glyphBottom);
 				}
 
-				// Apply kerning
-				if (i < text.Length - 1 && kerningPairs.TryGetValue((c, tempBuffer[i + 1].Character), out float kern))
+				if (i < text.Length - 1)
 				{
-					x += kern;
-				}
+					// Apply kerning
+					if (kerningPairs.TryGetValue((c, tempBuffer[i + 1].Character), out float kern))
+					{
+						x += kern;
+					}
 
-				x += glyph.Advance + spacing;
-				maxX = Math.Max(maxX, x); // Track advance position too
+					x += glyph.Advance + spacing;
+				}
 			}
 
 			return new Vector2(maxX - position.X, maxY - minY);
 		}
 
-		public (Vector2 size, Vector2 offset) MeasureTextPrecise(ReadOnlySpan<char> text)
+		public List<int> GetSkipCount(ReadOnlySpan<char> text)
 		{
-			Span<DrawGlyph> tempBuffer = stackalloc DrawGlyph[text.Length];
-			var processedText = preprocessText(text, ref tempBuffer);
+			int skipCount = 0;
+			List<int> skipList = [];
 
-			Vector2 position = Vector2.Zero;
-			float x = position.X;
-			float y = position.Y - glyphAtlas.Metrics.Ascender;
-
-			float minX = float.MaxValue;
-			float maxX = float.MinValue;
-			float minY = float.MaxValue;
-			float maxY = float.MinValue;
-
-			bool hasVisibleContent = false;
-			var tempActiveStyles = new List<(GlyphStyle style, int length)>();
+			int writeIndex = 0;
+			int nextEndTagIndex = -1;
+			int nextEndTagLength = 0;
 
 			for (int i = 0; i < text.Length; i++)
 			{
-				DrawGlyph g = tempBuffer[i];
-				char c = g.Character;
+				ushort currentStyleIndex = 0;
+				ushort currentStyleLength = 0;
 
-				if (c == '\n')
+				char c = text[i];
+
+				if (i == nextEndTagIndex)
 				{
-					x = position.X;
-					y -= glyphAtlas.Metrics.LineHeight;
-					continue;
+					i += nextEndTagLength;
+					c = text[i];
+
+					nextEndTagIndex = -1;
+					nextEndTagLength = 0;
 				}
 
-				if (!glyphs.TryGetValue(c, out var glyph))
-					continue;
-
-				// Handle styling
-				if (g.StyleLength > 0)
+				// Handle style tags
+				if (c == StylePrefixChar)
 				{
-					var newStyle = Stylizer.Styles[g.StyleIndex];
-					tempActiveStyles.Add((newStyle, g.StyleLength));
-				}
-
-				float spacing = 0.0f;
-				for (int j = 0; j < tempActiveStyles.Count; j++)
-				{
-					if (tempActiveStyles[j].length <= 0)
+					if (i == text.Length - 1)
 					{
-						tempActiveStyles.RemoveAt(j);
-						j--;
+						skipList.Add(++skipCount);
 						continue;
 					}
-					var style = tempActiveStyles[j];
-					style.length--;
-					tempActiveStyles[j] = style;
-					spacing += style.style.Spacing;
+					int skipSize = 1;
+
+					if (Stylizer.WordMatcher.TryMatchWord(text, i + 1, out currentStyleLength, out currentStyleIndex))
+					{
+
+					}
+					else if (Stylizer.TagParser.TryParseTag(text, i + 1, out ushort tagLength, out currentStyleIndex, out ushort startTagLength, out ushort endTagLength))
+					{
+						nextEndTagIndex = i + tagLength - endTagLength + 1;
+						nextEndTagLength = endTagLength;
+						skipSize += startTagLength;
+
+						currentStyleLength = (ushort)(tagLength - startTagLength - endTagLength);
+					}
+
+					i += skipSize;
+					c = text[i];
+					skipCount += skipSize;
+					skipList.Add(skipCount);
+					continue;
 				}
 
-				// Only consider glyphs that actually render something
-				if (glyph.PlaneBounds.Right > 0)
+				// Skip non-renderable characters but still process newlines for layout
+				if (c == ' ' || c == '\n')
 				{
-					float glyphLeft = x + glyph.PlaneBounds.Left;
-					float glyphBottom = y + glyph.PlaneBounds.Bottom;
-					float glyphRight = x + glyph.PlaneBounds.Right;
-					float glyphTop = y + glyph.PlaneBounds.Top;
-
-					minX = Math.Min(minX, glyphLeft);
-					maxX = Math.Max(maxX, glyphRight);
-					minY = Math.Min(minY, glyphBottom);
-					maxY = Math.Max(maxY, glyphTop);
-					hasVisibleContent = true;
+					writeIndex++;
+					skipList.Add(++skipCount);
+					continue;
 				}
 
-				// Apply kerning
-				if (i < text.Length - 1 && kerningPairs.TryGetValue((c, tempBuffer[i + 1].Character), out float kern))
+				// Only add characters that exist in the glyph atlas
+				if (!glyphs.TryGetValue(c, out Glyph glyph))
 				{
-					x += kern;
+					skipList.Add(++skipCount);
+					continue;
 				}
 
-				x += glyph.Advance + spacing;
+				// Add renderable character with current styling
+				writeIndex++;
+				skipList.Add(skipCount);
 			}
 
-			if (!hasVisibleContent)
+			// Count only truly renderable characters (not whitespace/newlines)
+			/*int renderableCount = 0;
+			for (int i = 0; i < writeIndex; i++)
 			{
-				return (Vector2.Zero, Vector2.Zero);
-			}
+				if (isWriteableChar(text[i]))
+				{
+					renderableCount++;
+				}
+			}*/
 
-			var size = new Vector2(maxX - minX, maxY - minY);
-			var offset = new Vector2(minX - position.X, minY - (position.Y - glyphAtlas.Metrics.Ascender));
-
-			return (size, offset);
+			return skipList;
 		}
-
 
 		public void Dispose()
 		{
