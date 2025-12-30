@@ -35,14 +35,21 @@
 			matchedLength = 0;
 			matchedValue = default;
 
+			int numWhitespace = 0;
+
 			for (int i = start; i < input.Length; i++)
 			{
 				if (!node.Children.TryGetValue(input[i], out node))
 					break;
 
+				if (char.IsWhiteSpace(input[i]))
+				{
+					numWhitespace++;
+				}
+
 				if (node.HasValue)
 				{
-					matchedLength = i - start + 1;
+					matchedLength = i - start + 1 - numWhitespace;
 					matchedValue = node.Value;
 				}
 			}

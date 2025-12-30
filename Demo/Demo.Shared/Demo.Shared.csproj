@@ -8,8 +8,12 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\AtlasBuilder\AtlasBuilder.csproj" />
     <ProjectReference Include="..\..\MonoMSDF\MonoMSDF.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Content\Kingthings_Petrock.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

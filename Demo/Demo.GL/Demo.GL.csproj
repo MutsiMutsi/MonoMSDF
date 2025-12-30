@@ -29,21 +29,28 @@
   <ItemGroup>
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.*" />
     <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.*" />
-    <PackageReference Include="MonoMSDF" Version="0.2.1" />
   </ItemGroup>
   
   <ItemGroup>
     <ProjectReference Include="..\Demo.Shared\Demo.Shared.csproj" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <None Update="Content\MaterialSymbolsSharp-Regular.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Content\NotoSansSC-Regular.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Content\Sui Generis Rg.otf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Content\ZCOOLQingKeHuangYou-Regular.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
   <Import Project="../../MonoMSDF/MonoMSDF.props" />
-
-  <!-- Atlas Builder -->
-  <PropertyGroup>
-    <FontSize>48.0</FontSize>
-    <DistanceRange>6.0</DistanceRange>
-  </PropertyGroup>
-  <Import Project="..\..\AtlasBuilder\AtlasBuilder.targets" />
 
   <Target Name="RestoreDotnetTools" BeforeTargets="CollectPackageReferences">
     <Message Text="Restoring dotnet tools (this might take a while depending on your internet speed and should only happen upon building your project for the first time, or after upgrading MonoGame, or clearing your nuget cache)" Importance="High" />

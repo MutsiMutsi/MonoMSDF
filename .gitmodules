@@ -1,0 +1,3 @@
+[submodule "SharpMSDF"]
+	path = SharpMSDF
+	url = git@github.com:MutsiMutsi/SharpMSDF.git

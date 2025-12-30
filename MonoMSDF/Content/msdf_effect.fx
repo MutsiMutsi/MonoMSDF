@@ -20,6 +20,7 @@ sampler2D SpriteTextureSampler = sampler_state
 
 float4x4 WorldViewProjection;
 float ZoomLevel;
+float AtlasSize;
 
 // Vertex shader input structure
 struct VertexShaderInput
@@ -54,7 +55,7 @@ struct VertexShaderOutput
     float4 StrokeColor : COLOR1;
     float2 TextureCoordinates : TEXCOORD0;
     
-    float2 PixelRanges : TEXCOORD1;
+    nointerpolation float2 PixelRanges : TEXCOORD1;
 };
 
 // Vertex shader
@@ -97,7 +98,7 @@ VertexShaderOutput MainVS(VertexShaderInput input)
     output.Position = mul(worldPos, WorldViewProjection);
 
 	// Pass through texture coordinates
-    output.TextureCoordinates = input.TextureCoordinates;
+    output.TextureCoordinates = input.TextureCoordinates / float2(AtlasSize, AtlasSize);
 	
 	// Pass through color (can be modulated later)
     output.FillColor = input.FillColor;
@@ -145,40 +146,44 @@ float4 MainPS(VertexShaderOutput input) : COLOR
     
     // Calculate screen pixel distance
     float screenPxDistance = (sd - 0.5) * input.PixelRanges.x;
+        
     float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
     
     // Apply text color with calculated opacity
     return float4(input.FillColor.rgb, input.FillColor.a * opacity);
 }
 
-// MSDF pixel shader with stroke support (using your existing ScreenPxRange)
 float4 StrokedPS(VertexShaderOutput input) : COLOR
 {
+    // If no stroke, just draw the fill
     if (input.StrokeColor.a == 0.0)
     {
         return MainPS(input);
     }
-    
+
+    // Sample MSDF texture and get median distance
     float3 msd = tex2D(SpriteTextureSampler, input.TextureCoordinates).rgb;
-    float medianSample = median(msd.r, msd.g, msd.b);
-    float signedDistance = medianSample - 0.5;
+    float sd = median(msd.r, msd.g, msd.b);
 
-    // Use your existing ScreenPxRange calculation
-    signedDistance *= input.PixelRanges.x;
+    // Convert to signed distance in *screen pixels*
+    float screenPxDistance = (sd - 0.5) * input.PixelRanges.x;
 
-    const float strokeThickness = 48.0 / ddx(input.TextureCoordinates.x);
-    
-    // Calculate stroke distance - positive values result in outline along the edge
-    float strokeDistance = -(abs(medianSample - 0.25 - strokeThickness) - strokeThickness);
-    strokeDistance *= input.PixelRanges.x;
-    
-    float opacity = clamp(signedDistance + 0.5, 0.0, 1.0);
-    float strokeOpacity = clamp(strokeDistance + 0.5, 0.0, 1.0);
+    // === Adjustable stroke parameters ===
+    float strokeWidthPx = 1; // Outline thickness in screen pixels
+    float halfStroke = strokeWidthPx * 0.5;
 
-    float4 strokeColor = input.StrokeColor;
-    float4 finalColor = lerp(strokeColor, input.FillColor, opacity);
-    
-    return float4(finalColor.rgb, finalColor.a * max(opacity, strokeOpacity));
+    // Fill alpha - fade in smoothly around the edge
+    float fillAlpha = saturate(screenPxDistance + 0.5);
+
+    // Stroke alpha - 1.0 inside stroke band, fades at edges
+    float strokeAlpha = 1.0 - smoothstep(halfStroke, halfStroke + 1.0, abs(screenPxDistance));
+
+    // Composite: stroke behind fill
+    float4 fillColor = input.FillColor * fillAlpha;
+    float4 strokeColor = input.StrokeColor * strokeAlpha * (1.0 - fillAlpha);
+
+
+    return fillColor + strokeColor;
 }
 
 

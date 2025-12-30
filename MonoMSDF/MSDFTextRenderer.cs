@@ -5,12 +5,14 @@ using System.Runtime.InteropServices;
 
 namespace MonoMSDF
 {
+	public delegate void GlyphBaker(ReadOnlySpan<char> span);
+
 	public class MSDFTextRenderer : IDisposable
 	{
 		public static char StylePrefixChar = '|';
 		public static bool EnableKerning = true;
 
-		public GlyphAtlas GetAtlas => glyphAtlas;
+		public ref GlyphAtlas GetAtlas => ref glyphAtlas;
 
 		private readonly GraphicsDevice graphicsDevice;
 		private readonly Effect msdifEffect;
@@ -18,7 +20,7 @@ namespace MonoMSDF
 		public Texture2D atlasTexture;
 		private readonly SamplerState samplerState;
 
-		private GlyphAtlas glyphAtlas;
+		private GlyphAtlas glyphAtlas = new GlyphAtlas();
 		private readonly Dictionary<int, Glyph> glyphs = [];
 		private readonly Dictionary<(char, char), float> kerningPairs = [];
 
@@ -36,6 +38,8 @@ namespace MonoMSDF
 		public TextStylizer Stylizer = new TextStylizer();
 		private List<(GlyphStyle style, int length)> activeStyles = [];
 		private List<(GlyphStyle style, int length)> activeMeasurementStyles = [];
+
+		public GlyphBaker BakeGlyph = null;
 
 		[StructLayout(LayoutKind.Sequential)]
 		public struct DrawGlyph
@@ -69,7 +73,7 @@ namespace MonoMSDF
 			this.graphicsDevice = graphicsDevice;
 			this.msdifEffect = contentManager.Load<Effect>("msdf_effect");
 
-			TextBuffer = new DynamicTextBuffer(graphicsDevice, 64);
+			TextBuffer = new DynamicTextBuffer(graphicsDevice, 16384/4);
 
 			// Create sampler state for texture filtering
 			samplerState = new SamplerState
@@ -101,6 +105,12 @@ namespace MonoMSDF
 			int nextEndTagIndex = -1;
 			int nextEndTagLength = 0;
 
+			//If we allow prebaking:
+			if (BakeGlyph != null)
+			{
+				BakeGlyph(text);
+			}
+
 			for (int i = 0; i < text.Length; i++)
 			{
 				ushort currentStyleIndex = 0;
@@ -111,6 +121,12 @@ namespace MonoMSDF
 				if (i == nextEndTagIndex)
 				{
 					i += nextEndTagLength;
+					if (i == text.Length)
+					{
+						nextEndTagIndex = -1;
+						nextEndTagLength = 0;
+						break;
+					}
 					c = text[i];
 
 					nextEndTagIndex = -1;
@@ -155,6 +171,7 @@ namespace MonoMSDF
 				// Only add characters that exist in the glyph atlas
 				if (!glyphs.TryGetValue(c, out Glyph glyph))
 				{
+					//If we dont have the character, see if we can bake one dynamically...
 					continue;
 				}
 
@@ -214,15 +231,15 @@ namespace MonoMSDF
 
 				foreach (Glyph glyph in glyphAtlas.Glyphs)
 				{
-					float texLeft = glyph.AtlasBounds.Left / glyphAtlas.Atlas.Width;
-					float texBottom = glyph.AtlasBounds.Bottom / glyphAtlas.Atlas.Height;
-					float texRight = glyph.AtlasBounds.Right / glyphAtlas.Atlas.Width;
-					float texTop = glyph.AtlasBounds.Top / glyphAtlas.Atlas.Height;
+					float texLeft = glyph.AtlasBounds.Left;
+					float texBottom = glyph.AtlasBounds.Bottom;
+					float texRight = glyph.AtlasBounds.Right;
+					float texTop = glyph.AtlasBounds.Top;
 
 					if (glyphAtlas.Atlas.YOrigin == "bottom")
 					{
-						texBottom = 1.0f - texBottom;
-						texTop = 1.0f - texTop;
+						texBottom = glyphAtlas.Atlas.Height - texBottom;
+						texTop = glyphAtlas.Atlas.Height - texTop;
 					}
 
 					//Precompute the texturecoordinates
@@ -249,6 +266,7 @@ namespace MonoMSDF
 
 				//Set the params
 				msdifEffect.Parameters["SpriteTexture"].SetValue(atlasTexture);
+
 				//msdifEffect.Parameters["AtlasSize"].SetValue(new Vector2(glyphAtlas.Atlas.Width, glyphAtlas.Atlas.Height));
 
 				return true;
@@ -285,7 +303,6 @@ namespace MonoMSDF
 		{
 			this.glyphAtlas = atlas;
 			this.atlasTexture = texture;
-			msdifEffect.Parameters["SpriteTexture"].SetValue(atlasTexture);
 
 			for (int i = 0; i < atlas.Glyphs.Count; i++)
 			{
@@ -293,12 +310,12 @@ namespace MonoMSDF
 			}
 
 			AddKernings(atlas.Kerning);
+
 		}
 
 		public TextGeometryHandle GenerateGeometry(ReadOnlySpan<char> text, Color fillColor, Color strokeColor)
 		{
 			geometryCount++;
-
 			// Use stackalloc for temporary storage - no heap allocations
 			// Assuming reasonable max text length, adjust as needed
 			Span<DrawGlyph> tempBuffer = stackalloc DrawGlyph[text.Length];
@@ -413,6 +430,8 @@ namespace MonoMSDF
 
 			Vector2 xBasis = new Vector2(view.M11, view.M12);
 			msdifEffect.Parameters["ZoomLevel"].SetValue(xBasis.Length());
+			msdifEffect.Parameters["SpriteTexture"].SetValue(atlasTexture);
+			msdifEffect.Parameters["AtlasSize"].SetValue(atlasTexture.Width);
 
 			matrixParameter.SetValue(view * projection);
 			msdifEffect.CurrentTechnique = drawTechniques[drawType];
@@ -430,11 +449,12 @@ namespace MonoMSDF
 
 			graphicsDevice.SetVertexBuffers(TextBuffer.VertexBufferBindings);
 
+			int totalPrimitiveCount = TextBuffer.Indices.Length / 3; // 3 indices -> 1 triangle
 			graphicsDevice.DrawInstancedPrimitives(
 				PrimitiveType.TriangleList,
 				baseVertex: 0,
 				startIndex: 0,
-				primitiveCount: TextBuffer.Vertices.Length / 2,
+				primitiveCount: totalPrimitiveCount,
 				instanceCount: instanceCount
 			);
 
@@ -551,6 +571,8 @@ namespace MonoMSDF
 
 			return numChars;
 		}
+
+		public float GetLineHeight => glyphAtlas.Metrics.LineHeight;
 
 		public Vector2 MeasureTextLayout(ReadOnlySpan<char> text)
 		{
@@ -725,6 +747,11 @@ namespace MonoMSDF
 			atlasTexture?.Dispose();
 			samplerState?.Dispose();
 			TextBuffer?.Dispose();
+		}
+
+		public void FreeGeometry(TextGeometryHandle textHandle)
+		{
+			TextBuffer.Free(textHandle.BufferRange);
 		}
 	}
 }

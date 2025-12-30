@@ -17,6 +17,7 @@
     <RepositoryUrl>https://github.com/MutsiMutsi/MonoMSDF</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <IncludeSymbols>False</IncludeSymbols>
+    <Configurations>Debug;Release;Debug_NoFastStart</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
@@ -39,6 +40,10 @@
     <PackageReference Include="MonoGame.Framework.Native" Version="3.8.*">
         <PrivateAssets>All</PrivateAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharpMSDF\Source\SharpMSDF.csproj" />
   </ItemGroup>
 
 </Project>
