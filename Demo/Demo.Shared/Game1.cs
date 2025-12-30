@@ -271,7 +271,6 @@ namespace Demo.Shared
 		protected override void Draw(GameTime gameTime)
 		{
 			GraphicsDevice.Clear(new Color(55, 47, 58));
-			GraphicsDevice.Clear(Color.White);
 
 			_spriteBatch.Begin();
 			_spriteBatch.Draw(_onDemandRenderer.atlasTexture, new Vector2(1920 - _onDemandRenderer.atlasTexture.Width - 8, 8), null, Color.White, 0f, Vector2.Zero, 1f, SpriteEffects.FlipHorizontally, 0f);
